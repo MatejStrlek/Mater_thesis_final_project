@@ -18,6 +18,8 @@ This repo has two purposes, in sequence:
 
 Source lives locally at `C:\Users\Matej\IdeaProjects\uni_course_management` (a separate repo — read from it freely for building Page Objects/fixtures, never write to it; nothing about this suite gets committed there). Nothing is symlinked in; it's just referenced by absolute path when needed.
 
+**That repo now has its own `README.md` and `docs/API.md` — treat those as the authoritative reference** for routes, request/response shapes, seed data, and gotchas (more complete and more current than anything summarized below; re-read them directly rather than trusting a stale paraphrase here if anything seems off).
+
 - **Run it via plain `docker run` of the prebuilt image** (decided over `docker compose`, which also brings up Prometheus/Grafana — unneeded for this suite):
   ```bash
   docker run -d --name uni-course-management -p 8081:8081 \
@@ -27,9 +29,14 @@ Source lives locally at `C:\Users\Matej\IdeaProjects\uni_course_management` (a s
     ghcr.io/matejstrlek/uni_course_management:latest
   ```
   App comes up at `http://localhost:8081`. (A container with this name may already exist from a prior session — `docker start uni-course-management` if so, rather than erroring on the name conflict.) `java`/`mvn` are not on this machine's PATH, so Docker is the only practical way to run the app, both locally and in CI.
-- **Stack**: Spring Boot 3.5 + Thymeleaf (server-rendered UI) + a separate stateless JWT REST API under `/api/**`. H2 in-memory DB, reseeded fresh on every container start from `data.sql` — no manual test-data setup needed.
-- **Auth**: session-based form login at `/login` (`#username`, `#password`, `button[type=submit]`), CSRF disabled. Role-guarded paths: `/admin/**`, `/professor/**`, `/student/**` (role hierarchy `ADMIN > PROFESSOR`, `ADMIN > STUDENT`). REST API auth is separate: `POST /api/auth/login` issues a JWT, `/api/auth/me|refresh|logout` exist too; `/api/admin/**`, `/api/professor/**`, `/api/student/**` are role-gated the same way.
-- **Seeded credentials** (all same password): `admin`/`password` (ADMIN), `mkrmpotic`/`password` (PROFESSOR, plus 4 more professor accounts), `sivanovic`/`password` (STUDENT, plus 6 more student accounts incl. `mgalic`). Courses, enrollments, grades, and a weekly schedule are all pre-seeded too.
+- **Stack**: Spring Boot 3.5 + Thymeleaf (server-rendered UI) + a separate stateless JWT REST API under `/api/**`. H2 in-memory DB, reseeded fresh on every container **restart** (not between test runs within the same running container — see quirks below) from `data.sql`.
+- **Auth**: session-based form login at `/login` (`#username`, `#password`, `button[type=submit]`), CSRF disabled everywhere. Role-guarded paths: `/admin/**`, `/professor/**`, `/student/**` (role hierarchy `ADMIN > PROFESSOR`, `ADMIN > STUDENT`). REST API auth is separate and stateless: `POST /api/auth/login` returns a JWT (`Authorization: Bearer <accessToken>`, 15 min expiry) + refresh token (30 days); `/api/auth/me|refresh|logout|test-roles` also exist.
+- **Seeded credentials** (all password `password`): `admin` (ADMIN), `mkrmpotic`/`aradovan`/`iobad`/`lkrmpotic`/`jpetrovic` (PROFESSOR — only the first 3 own courses), `sivanovic` + 6 more incl. `mgalic` (STUDENT). Full route table, REST endpoint list, and enum reference: `docs/API.md`.
+- **Known quirks that affect test design** (from `docs/API.md`, not bugs to fix — this is a fixed test target):
+  1. `POST`/`GET /api/grades` are guarded with `hasRole('ADMINISTRATOR')` (typo, not a real role) instead of `ADMIN` — an admin's JWT will always 403 on these two endpoints via the API. Grading through the web UI is unaffected.
+  2. **Mutating state (enroll/drop/delete/grade) persists across test runs within the same running container**, only resetting on container restart — prefer creating throwaway entities over asserting exact seed-data counts.
+  3. `GET /dashboard` is `permitAll` — renders without a session, just empty. Assert on content, not a 401/redirect.
+  4. CSV export endpoints (`.../export-grades`) return `text/csv` with `Content-Disposition: attachment` — good candidates for `page.waitForEvent('download')`.
 - **Surface area for tests**: course CRUD, course content CRUD, schedules, grades, enrollments, user management — 30 templates across admin/professor/student roles, comfortably enough for the spec's ≥15 E2E tests and ≥3-page visual/accessibility requirements.
 - The app repo already has one small Java-based Playwright smoke test (`src/test/.../e2e/PlaywrightE2ETest.java`, login page only, CSS-ID locators) — useful as a sanity reference, not something this suite extends (this is a fully separate TypeScript repo per the spec's own rules).
 
