@@ -12,14 +12,52 @@ This repo has two purposes, in sequence:
 
 2. **Reference implementation** (next phase): this repo becomes the instructor's own worked example of that same spec, built against **`https://github.com/MatejStrlek/uni_course_management`** (*Rapid Development of Java Applications Using Frameworks*) — which the spec itself names as "Option B — the reference project" (`docs/PROJECT-SPECIFICATION.md` §2). Building the full reference solution against exactly that project doubles as: (a) the master's thesis's practical deliverable, proving the spec is buildable end-to-end, and (b) the actual answer key backing the spec's own fallback option. Must satisfy every minimum + desired requirement in the rubric, not just a subset.
 
-`docs/THEORY.md` is copied verbatim from the sibling labs repo — the concept reference every spec requirement traces back to. `playwright.config.ts` and `tests/` are still the generic scaffold from step 1; they'll be pointed at `uni_course_management` once phase 2 starts (a `baseURL`/`webServer` and real fixtures don't exist yet).
+`docs/THEORY.md` is copied verbatim from the sibling labs repo — the concept reference every spec requirement traces back to.
+
+## Target application: `uni_course_management`
+
+Source lives locally at `C:\Users\Matej\IdeaProjects\uni_course_management` (a separate repo — read from it freely for building Page Objects/fixtures, never write to it; nothing about this suite gets committed there). Nothing is symlinked in; it's just referenced by absolute path when needed.
+
+- **Run it via plain `docker run` of the prebuilt image** (decided over `docker compose`, which also brings up Prometheus/Grafana — unneeded for this suite):
+  ```bash
+  docker run -d --name uni-course-management -p 8081:8081 \
+    -e MAIL_USERNAME=ci-test@example.com \
+    -e MAIL_PASSWORD=ci-test-password \
+    -e JWT_SECRET=CiTestSecretKeyThatIsAtLeast256BitsLongForHS256AlgorithmOk \
+    ghcr.io/matejstrlek/uni_course_management:latest
+  ```
+  App comes up at `http://localhost:8081`. (A container with this name may already exist from a prior session — `docker start uni-course-management` if so, rather than erroring on the name conflict.) `java`/`mvn` are not on this machine's PATH, so Docker is the only practical way to run the app, both locally and in CI.
+- **Stack**: Spring Boot 3.5 + Thymeleaf (server-rendered UI) + a separate stateless JWT REST API under `/api/**`. H2 in-memory DB, reseeded fresh on every container start from `data.sql` — no manual test-data setup needed.
+- **Auth**: session-based form login at `/login` (`#username`, `#password`, `button[type=submit]`), CSRF disabled. Role-guarded paths: `/admin/**`, `/professor/**`, `/student/**` (role hierarchy `ADMIN > PROFESSOR`, `ADMIN > STUDENT`). REST API auth is separate: `POST /api/auth/login` issues a JWT, `/api/auth/me|refresh|logout` exist too; `/api/admin/**`, `/api/professor/**`, `/api/student/**` are role-gated the same way.
+- **Seeded credentials** (all same password): `admin`/`password` (ADMIN), `mkrmpotic`/`password` (PROFESSOR, plus 4 more professor accounts), `sivanovic`/`password` (STUDENT, plus 6 more student accounts incl. `mgalic`). Courses, enrollments, grades, and a weekly schedule are all pre-seeded too.
+- **Surface area for tests**: course CRUD, course content CRUD, schedules, grades, enrollments, user management — 30 templates across admin/professor/student roles, comfortably enough for the spec's ≥15 E2E tests and ≥3-page visual/accessibility requirements.
+- The app repo already has one small Java-based Playwright smoke test (`src/test/.../e2e/PlaywrightE2ETest.java`, login page only, CSS-ID locators) — useful as a sanity reference, not something this suite extends (this is a fully separate TypeScript repo per the spec's own rules).
+
+## Build plan (tracks the spec's 6 outcome pairs)
+
+Roughly follows the lab course's own week order (auth → structure → realistic conditions → data-driven → visual/a11y → flake → CI). Update the checkboxes here as phases complete, so a fresh session can see progress without re-deriving it.
+
+- [x] Phase 0 — app running via Docker, reachable at `localhost:8081`
+- [ ] Phase 1 — `playwright.config.ts` pointed at the app (`baseURL`), placeholder `tests/`/`tests-examples/` scaffold replaced
+- [ ] Phase 2 — auth setup projects (`*.setup.ts`) → per-role `storageState`, `dependencies` wiring (Outcome 4 min)
+- [ ] Phase 3 — Page Object Model for ≥3 pages/flows + a custom fixture (`base.extend`) (Outcome 3 min)
+- [ ] Phase 4 — ≥15 independent, deterministic E2E tests across roles (Outcome 2 min, Outcome 3 min)
+- [ ] Phase 5 — ≥2 `page.route()` network-interception tests; env-driven `baseURL` (Outcome 4 min)
+- [ ] Phase 6 — ≥2 API tests via the `request` fixture against `/api/**` (JWT) + coverage-plan table (Outcome 1 desired)
+- [ ] Phase 7 — ≥1 data-driven suite (≥5 variations) + dedup refactor of ≥3 tests (Outcome 2 desired)
+- [ ] Phase 8 — `toHaveScreenshot()` baselines (≥3 pages) + axe-core scans (≥3 pages) with judged findings (Outcome 4 desired)
+- [ ] Phase 9 — one real failure walkthrough (report + trace) + one flaky/race-condition test found or built, fixed or quarantined (Outcome 5 min + desired)
+- [ ] Phase 10 — GitHub Actions CI (install/run/upload report) + sharding matrix with merge-reports (Outcome 6 min + desired)
+- [ ] Phase 11 — `README.md` written sections: testing strategy, coverage plan, architecture note + diagram, critical evaluation, debugging walkthrough, suite-health note, CI trade-off analysis (Outcome 3 desired, Outcome 6 desired)
+- [ ] Phase 12 — self-grade against the full rubric before calling it done
 
 ## Commands
 
 ```bash
+docker start uni-course-management        # (or the docker run command in "Target application" below, first time)
 npx playwright test                       # run all tests headless (all 3 browsers)
-npx playwright test tests/example.spec.ts # run a single file
-npx playwright test -g "get started link" # run tests matching a title
+npx playwright test tests/<file>.spec.ts  # run a single file
+npx playwright test -g "test title"       # run tests matching a title
 npx playwright test --project=chromium    # run against one browser only
 npx playwright test --ui                  # interactive UI mode
 npx playwright test --debug               # step-through debugger
@@ -31,10 +69,9 @@ npx playwright show-report                # open the last HTML report
 
 ## Architecture
 
-- `playwright.config.ts` — single source of config: `testDir: ./tests`, three browser projects (chromium, firefox, webkit), HTML reporter, trace captured `on-first-retry`. No `baseURL` or `webServer` set yet — add one when a target app exists, so tests can use relative `page.goto('/')`.
-- `tests/` — the actual test suite (`testDir`), the only directory Playwright runs by default.
-- `tests-examples/` — reference-only sample spec (todo app demo). Not under `testDir`, so it does not run as part of `npx playwright test`; kept as a pattern reference.
-- `.github/workflows/playwright.yml` — CI: `npm ci` → `npx playwright install --with-deps` → `npx playwright test`, uploads the HTML report as an artifact. Triggers on push/PR to `main`/`master`.
+- `playwright.config.ts` — `testDir: ./tests`, three browser projects (chromium, firefox, webkit), HTML reporter, trace captured `on-first-retry`. `baseURL`/`webServer`/real projects (setup + role-based) get added in Phase 1/2 of the build plan below — not done yet as of the last update to this file.
+- `tests/` — the test suite (`testDir`), the only directory Playwright runs by default. Currently empty — the `npm init playwright` placeholder scaffold (`tests/example.spec.ts`, `tests-examples/`) was deliberately removed once the real target app was confirmed, so nothing generic is left to clean up later.
+- `.github/workflows/playwright.yml` — still the generic `npm ci` → `npx playwright install --with-deps` → `npx playwright test` scaffold from init; needs real work in Phase 10 (bring up the target app via `docker run`, sharding matrix, merge-reports).
 - `docs/PROJECT-SPECIFICATION.md` / `docs/THEORY.md` — see "Project" above. Per the spec's own §5 (Submission Requirements), the reference implementation's written deliverables (testing-strategy section, architecture note, debugging walkthrough, CI trade-off analysis, coverage plan, suite-health note) belong as **sections within the top-level `README.md`**, not separate `docs/` files — that's a deliberate change from this repo's earlier (pre-.docx) draft spec, don't reintroduce standalone `TESTING-STRATEGY.md`-style files.
 
 ## Environment gotcha
