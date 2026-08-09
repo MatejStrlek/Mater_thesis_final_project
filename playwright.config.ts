@@ -1,12 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-
-/**
- * Target app: uni_course_management, run via `docker run` (see CLAUDE.md).
- * BASE_URL is read from the environment so the same suite can point at a
- * different environment without editing this file (final project spec,
- * Outcome 4: environment configuration).
- */
-const baseURL = process.env.BASE_URL ?? 'http://localhost:8081';
+import { authStatePath, baseURL } from './utils/env';
 
 export default defineConfig({
   testDir: './tests',
@@ -42,19 +35,19 @@ export default defineConfig({
     {
       name: 'admin',
       testMatch: 'admin/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/admin.json' },
+      use: { ...devices['Desktop Chrome'], storageState: authStatePath('admin') },
       dependencies: ['setup'],
     },
     {
       name: 'professor',
       testMatch: 'professor/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/professor.json' },
+      use: { ...devices['Desktop Chrome'], storageState: authStatePath('professor') },
       dependencies: ['setup'],
     },
     {
       name: 'student',
       testMatch: 'student/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/student.json' },
+      use: { ...devices['Desktop Chrome'], storageState: authStatePath('student') },
       dependencies: ['setup'],
     },
     {

@@ -14,8 +14,8 @@ test.describe('Login page', () => {
     await expect(loginPage.alert).toContainText('Invalid username or password');
   });
 
-  test('redirects an unauthenticated visit to a protected route to /login', async ({ page }) => {
-    await page.goto('/admin/courses');
+  test('redirects an unauthenticated visit to a protected route to /login', async ({ page, adminCoursesPage }) => {
+    await adminCoursesPage.goto();
     await expect(page).toHaveURL(/\/login/);
   });
 });

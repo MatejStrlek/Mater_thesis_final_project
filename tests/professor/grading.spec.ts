@@ -1,9 +1,10 @@
 import { test, expect } from '../../fixtures';
+import { course } from '../../utils/test-data';
 
 test.describe('Professor grading', () => {
   test.beforeEach(async ({ professorCoursesPage }) => {
     await professorCoursesPage.goto();
-    await professorCoursesPage.manageStudents('CS101');
+    await professorCoursesPage.manageStudents(course.cs101);
   });
 
   test('shows a pre-seeded grade for a still-active enrollment', async ({ professorGradingPage }) => {

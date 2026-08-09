@@ -6,15 +6,18 @@ export interface SeedUser {
   role: Role;
 }
 
+/** Every seeded account (data.sql) uses this same password. */
+const SEED_PASSWORD = 'password';
+
 /**
  * One representative account per role. Used by tests/auth.setup.ts to
  * generate the storageState each role-scoped project depends on, and as
  * the default actor in most specs.
  */
 export const primaryUsers: Record<Role, SeedUser> = {
-  admin: { username: 'admin', password: 'password', role: 'admin' },
-  professor: { username: 'mkrmpotic', password: 'password', role: 'professor' },
-  student: { username: 'sivanovic', password: 'password', role: 'student' },
+  admin: { username: 'admin', password: SEED_PASSWORD, role: 'admin' },
+  professor: { username: 'mkrmpotic', password: SEED_PASSWORD, role: 'professor' },
+  student: { username: 'sivanovic', password: SEED_PASSWORD, role: 'student' },
 };
 
 /**
@@ -27,15 +30,32 @@ export const primaryUsers: Record<Role, SeedUser> = {
 export const allUsers: SeedUser[] = [
   primaryUsers.admin,
   primaryUsers.professor,
-  { username: 'aradovan', password: 'password', role: 'professor' },
-  { username: 'iobad', password: 'password', role: 'professor' },
-  { username: 'lkrmpotic', password: 'password', role: 'professor' },
-  { username: 'jpetrovic', password: 'password', role: 'professor' },
+  { username: 'aradovan', password: SEED_PASSWORD, role: 'professor' },
+  { username: 'iobad', password: SEED_PASSWORD, role: 'professor' },
+  { username: 'lkrmpotic', password: SEED_PASSWORD, role: 'professor' },
+  { username: 'jpetrovic', password: SEED_PASSWORD, role: 'professor' },
   primaryUsers.student,
-  { username: 'dmarinkovic', password: 'password', role: 'student' },
-  { username: 'lpetrovic', password: 'password', role: 'student' },
-  { username: 'mstojanovic', password: 'password', role: 'student' },
-  { username: 'njakovljevic', password: 'password', role: 'student' },
-  { username: 'tmitrovic', password: 'password', role: 'student' },
-  { username: 'mgalic', password: 'password', role: 'student' },
+  { username: 'dmarinkovic', password: SEED_PASSWORD, role: 'student' },
+  { username: 'lpetrovic', password: SEED_PASSWORD, role: 'student' },
+  { username: 'mstojanovic', password: SEED_PASSWORD, role: 'student' },
+  { username: 'njakovljevic', password: SEED_PASSWORD, role: 'student' },
+  { username: 'tmitrovic', password: SEED_PASSWORD, role: 'student' },
+  { username: 'mgalic', password: SEED_PASSWORD, role: 'student' },
 ];
+
+/**
+ * Seeded course codes (data.sql) referenced by more than one spec, or
+ * whose ownership/enrollment context matters to the test using them —
+ * named here instead of as bare string literals so that context isn't
+ * lost and the code isn't retyped at each use site.
+ */
+export const course = {
+  /** Introduction to Computer Science — owned by mkrmpotic (primaryUsers.professor). */
+  cs101: 'CS101',
+  /** Owned by aradovan, not mkrmpotic — used to prove professor course-list scoping. */
+  bio101: 'BIO101',
+  /** Electromagnetism — not in primaryUsers.student's (sivanovic) existing enrollments; used for enroll/drop. */
+  phy201: 'PHY201',
+  /** Creative Writing — likewise not pre-enrolled; used for a second, independent enroll/drop test. */
+  eng201: 'ENG201',
+} as const;

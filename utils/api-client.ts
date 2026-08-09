@@ -1,6 +1,5 @@
 import { request as playwrightRequest, type APIRequestContext } from '@playwright/test';
-
-const baseURL = process.env.BASE_URL ?? 'http://localhost:8081';
+import { baseURL } from './env';
 
 export interface LoginResult {
   accessToken: string;
