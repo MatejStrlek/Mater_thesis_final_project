@@ -17,8 +17,31 @@ jobs:
       run: npm ci
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
+    - name: Start target app (uni_course_management)
+      run: |
+        docker run -d --name uni-course-management -p 8081:8081 \
+          -e MAIL_USERNAME=ci-test@example.com \
+          -e MAIL_PASSWORD=ci-test-password \
+          -e JWT_SECRET=CiTestSecretKeyThatIsAtLeast256BitsLongForHS256AlgorithmOk \
+          ghcr.io/matejstrlek/uni_course_management:latest
+    - name: Wait for app to be ready
+      run: |
+        for i in $(seq 1 30); do
+          code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/login || true)
+          if [ "$code" = "200" ]; then
+            echo "App is up after ${i} attempt(s)"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "App did not become ready in time"
+        docker logs uni-course-management
+        exit 1
     - name: Run Playwright tests
       run: npx playwright test
+    - name: Dump app logs on failure
+      if: failure()
+      run: docker logs uni-course-management
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
