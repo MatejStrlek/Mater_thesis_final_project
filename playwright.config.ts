@@ -1,59 +1,65 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
+ * Target app: uni_course_management, run via `docker run` (see CLAUDE.md).
+ * BASE_URL is read from the environment so the same suite can point at a
+ * different environment without editing this file (final project spec,
+ * Outcome 4: environment configuration).
  */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
+const baseURL = process.env.BASE_URL ?? 'http://localhost:8081';
 
-/**
- * See https://playwright.dev/docs/test-configuration.
- */
 export default defineConfig({
   testDir: './tests',
-  /* Run tests in files in parallel */
   fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    // baseURL: 'http://127.0.0.1:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    baseURL,
     trace: 'on-first-retry',
   },
 
-  /* Configure projects for major browsers */
+  /**
+   * One project per role instead of per browser: `admin`/`professor`/`student`
+   * each depend on `setup` (which logs in as all three roles once and saves
+   * storageState per role), so specs never re-do the login UI flow to reach
+   * an authenticated page. `public` covers unauthenticated flows (login page
+   * itself, redirects). `api` covers the JWT REST layer directly and manages
+   * its own bearer tokens per test, so it needs no storageState.
+   */
   projects: [
     {
-      name: 'chromium',
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+    {
+      name: 'public',
+      testMatch: 'public/**/*.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
-
     {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      name: 'admin',
+      testMatch: 'admin/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/admin.json' },
+      dependencies: ['setup'],
     },
-
     {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      name: 'professor',
+      testMatch: 'professor/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/professor.json' },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'student',
+      testMatch: 'student/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/student.json' },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'api',
+      testMatch: 'api/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://127.0.0.1:3000',
-  //   reuseExistingOutputs: !process.env.CI,
-  // },
 });
