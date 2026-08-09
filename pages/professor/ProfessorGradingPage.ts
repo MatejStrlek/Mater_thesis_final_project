@@ -1,4 +1,4 @@
-import { expect, type Locator } from '@playwright/test';
+import { expect, type Download, type Locator } from '@playwright/test';
 import { BasePage } from '../BasePage';
 
 /**
@@ -18,17 +18,34 @@ export class ProfessorGradingPage extends BasePage {
     return this.row(lastName);
   }
 
-  async gradeStudent(lastName: string, grade: number) {
-    const row = this.studentRow(lastName);
-    await row.getByRole('spinbutton').fill(String(grade));
-    await row.getByRole('button', { name: 'Save' }).click();
-  }
-
   async expectCurrentGrade(lastName: string, grade: number) {
     await expect(this.studentRow(lastName)).toContainText(String(grade));
   }
 
   async expectNotInRoster(lastName: string) {
     await expect(this.studentRow(lastName)).toHaveCount(0);
+  }
+
+  /**
+   * Grades whichever student currently appears first in the active roster
+   * and returns their last name, rather than hardcoding a specific seeded
+   * student — grading completes (and removes) whoever gets graded, so a
+   * hardcoded name isn't repeatable across multiple runs against the same
+   * long-lived container without a restart (see CLAUDE.md's known quirks).
+   */
+  async gradeFirstAvailableStudent(grade: number): Promise<string> {
+    const firstRow = this.page.getByRole('rowgroup').nth(1).getByRole('row').first();
+    // `strong` isolates the last name within the cell; no ARIA role
+    // distinguishes last name from first name inside the same table cell.
+    const lastName = await firstRow.locator('strong').innerText();
+    await firstRow.getByRole('spinbutton').fill(String(grade));
+    await firstRow.getByRole('button', { name: 'Save' }).click();
+    return lastName;
+  }
+
+  async exportCsv(): Promise<Download> {
+    const downloadPromise = this.page.waitForEvent('download');
+    await this.page.getByRole('link', { name: 'Export CSV' }).click();
+    return downloadPromise;
   }
 }
