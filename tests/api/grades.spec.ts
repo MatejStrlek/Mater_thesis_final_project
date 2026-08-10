@@ -3,16 +3,11 @@ import { primaryUsers, courseId, enrollmentId } from '../../utils/test-data';
 import { loginViaApi } from '../../utils/api-client';
 
 test.describe('Grades API', () => {
-  // GradeRestController guards both endpoints with hasRole('ADMINISTRATOR') —
-  // a role that doesn't exist in the app (UserRole is STUDENT/PROFESSOR/ADMIN),
-  // so it can never match directly. That typo looks like it should 403 an
-  // admin's JWT, but SecurityConfig's roleHierarchy() declares
-  // "ROLE_ADMIN > ROLE_PROFESSOR", and both endpoints also accept
-  // hasRole('PROFESSOR') — which an admin satisfies via that hierarchy. So in
-  // practice an admin JWT passes both endpoints anyway. Confirmed directly
-  // against the running app (curl) before writing this test, since the
-  // typo alone would suggest the opposite.
-  test('an admin JWT can use both grade endpoints despite the ADMINISTRATOR role typo', async ({ request }) => {
+  // Permission-boundary check: an admin JWT can grade and read grades
+  // directly via GradeRestController's ADMIN check. (This endpoint used to
+  // have an 'ADMINISTRATOR' typo instead of 'ADMIN' — see CLAUDE.md's known
+  // quirks for that history — fixed upstream since.)
+  test('an admin JWT can use both grade endpoints directly (ADMIN role)', async ({ request }) => {
     const { accessToken } = await loginViaApi(request, primaryUsers.admin.username, primaryUsers.admin.password);
     const headers = { Authorization: `Bearer ${accessToken}` };
 

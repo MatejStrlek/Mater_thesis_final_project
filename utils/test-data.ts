@@ -21,18 +21,6 @@ export const primaryUsers: Record<Role, SeedUser> = {
 };
 
 /**
- * Student used by API-level enrollment tests instead of primaryUsers.student
- * (sivanovic). sivanovic's seeded enrollment (id 1, CS101) already has a
- * grade, and Enrollment<->Grade is a bidirectional Jackson relation with no
- * @JsonIgnore/@JsonManagedReference — GET /api/enrollments for any student
- * holding a graded enrollment fails server-side with a JSON nesting-depth
- * error. mgalic's two seeded enrollments (ENG101, CS201) are both ungraded,
- * so GET /api/enrollments works normally for her. Confirmed via direct curl
- * against the running app (Phase 6).
- */
-export const apiEnrollmentTestStudent: SeedUser = { username: 'mgalic', password: SEED_PASSWORD, role: 'student' };
-
-/**
  * Full seeded roster (uni_course_management's src/main/resources/data.sql),
  * for tests needing a second account of a role — e.g. permission-boundary
  * checks ("professor B can't grade professor A's course") or data-driven
@@ -52,7 +40,7 @@ export const allUsers: SeedUser[] = [
   { username: 'mstojanovic', password: SEED_PASSWORD, role: 'student' },
   { username: 'njakovljevic', password: SEED_PASSWORD, role: 'student' },
   { username: 'tmitrovic', password: SEED_PASSWORD, role: 'student' },
-  apiEnrollmentTestStudent,
+  { username: 'mgalic', password: SEED_PASSWORD, role: 'student' },
 ];
 
 /**
@@ -84,15 +72,7 @@ export const course = {
 export const courseId = {
   /** Linear Algebra — courses 12-15 have zero seeded enrollments, and no UI spec touches it either; kept clear for the API enroll/drop lifecycle test. */
   math301: 12,
-  /**
-   * World History — primaryUsers.student's (sivanovic) enrollment here (id
-   * enrollmentId.sivanovicHist101) is seeded ungraded. Deliberately not one
-   * of apiEnrollmentTestStudent's (mgalic) courses: the grades test POSTs a
-   * grade to it, and running that concurrently with enrollments.spec.ts's
-   * GET /api/enrollments for the same student would (and once did, under
-   * fullyParallel) intermittently trip the circular-serialization bug
-   * documented on apiEnrollmentTestStudent above.
-   */
+  /** World History — primaryUsers.student's (sivanovic) enrollment here (enrollmentId.sivanovicHist101) is seeded ungraded; used by the grades-endpoint role-check test. */
   hist101: 5,
 } as const;
 
