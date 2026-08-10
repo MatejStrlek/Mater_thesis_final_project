@@ -79,10 +79,14 @@ export const course = {
  * data.sql isn't edited."
  */
 export const courseId = {
+  /** Introduction to Computer Science — used by the single-course-lookup and has-a-schedule API tests. */
+  cs101: 1,
   /** Linear Algebra — courses 12-15 have zero seeded enrollments, and no UI spec touches it either; kept clear for the API enroll/drop lifecycle test. */
   math301: 12,
   /** World History — primaryUsers.student's (sivanovic) enrollment here (enrollmentId.sivanovicHist101) is seeded ungraded; used by the grades-endpoint role-check test. */
   hist101: 5,
+  /** Modern History — one of courses 12-15, which docs/API.md notes have zero seeded schedule entries; used by the no-schedule-found API test. */
+  hist201: 15,
 } as const;
 
 /**

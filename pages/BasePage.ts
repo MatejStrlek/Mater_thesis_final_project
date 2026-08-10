@@ -12,6 +12,17 @@ export class BasePage {
     await this.page.getByRole('button', { name: 'Logout' }).click();
   }
 
+  /**
+   * The language dropdown's own toggle button has no stable accessible
+   * name — its visible text is "EN"/"HR"/"DE" depending on the *current*
+   * locale, which is exactly what this method changes — so `data-testid`
+   * (added to the app's navbar for this) is used instead of role+name here.
+   */
+  async switchLanguage(language: 'en' | 'hr' | 'de') {
+    await this.page.getByTestId('language-dropdown-toggle').click();
+    await this.page.getByTestId(`language-option-${language}`).click();
+  }
+
   protected row(text: string): Locator {
     return this.page.getByRole('row', { name: text });
   }

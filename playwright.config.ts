@@ -55,5 +55,17 @@ export default defineConfig({
       testMatch: 'api/**/*.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      // For specs that are genuinely role-agnostic (e.g. the language
+      // switcher, part of the shared navbar every role sees) rather than
+      // belonging to one role's folder. No fixed storageState and no
+      // `dependencies: ['setup']` — these specs log in fresh per test
+      // instead of reusing a shared storageState file, deliberately: see
+      // tests/shared/localization.spec.ts for why sharing a session is
+      // unsafe for anything that mutates session-scoped state.
+      name: 'shared',
+      testMatch: 'shared/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
 });

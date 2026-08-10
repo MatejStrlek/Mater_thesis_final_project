@@ -1,5 +1,6 @@
 import { test as base } from '@playwright/test';
 import { LoginPage } from '../pages/LoginPage';
+import { DashboardPage } from '../pages/DashboardPage';
 import { AdminCoursesPage } from '../pages/admin/AdminCoursesPage';
 import { ProfessorCoursesPage } from '../pages/professor/ProfessorCoursesPage';
 import { ProfessorGradingPage } from '../pages/professor/ProfessorGradingPage';
@@ -13,6 +14,7 @@ import { StudentEnrollmentsPage } from '../pages/student/StudentEnrollmentsPage'
  */
 type Fixtures = {
   loginPage: LoginPage;
+  dashboardPage: DashboardPage;
   adminCoursesPage: AdminCoursesPage;
   professorCoursesPage: ProfessorCoursesPage;
   professorGradingPage: ProfessorGradingPage;
@@ -23,6 +25,9 @@ type Fixtures = {
 export const test = base.extend<Fixtures>({
   loginPage: async ({ page }, use) => {
     await use(new LoginPage(page));
+  },
+  dashboardPage: async ({ page }, use) => {
+    await use(new DashboardPage(page));
   },
   adminCoursesPage: async ({ page }, use) => {
     await use(new AdminCoursesPage(page));
