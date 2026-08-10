@@ -2,6 +2,48 @@
 
 Playwright test suite for [`uni_course_management`](https://github.com/MatejStrlek/uni_course_management), built as the reference implementation for the *End-to-End Test Automation with Playwright* course's final project specification (see `docs/PROJECT-SPECIFICATION.md`).
 
+## Project Overview & Setup
+
+`uni_course_management` is a Spring Boot 3.5 + Thymeleaf server-rendered web app (Spring Security session login, H2 in-memory DB) with a separate stateless JWT REST API under `/api/**`, managing university courses, enrollments, grades, and schedules across three roles — Admin, Professor, Student. This repo is a TypeScript Playwright suite testing it as a black box (no access to or changes in its Java source).
+
+**This suite's stack**: `@playwright/test`, `@axe-core/playwright` for accessibility scans, Docker to run the target app.
+
+**Install**:
+```bash
+npm ci
+npx playwright install --with-deps
+```
+
+**Start the target app** (H2 reseeds on container *restart* only, never between test runs — see quirk 1 below):
+```bash
+docker run -d --name uni-course-management -p 8081:8081 \
+  -e MAIL_USERNAME=ci-test@example.com \
+  -e MAIL_PASSWORD=ci-test-password \
+  -e JWT_SECRET=CiTestSecretKeyThatIsAtLeast256BitsLongForHS256AlgorithmOk \
+  ghcr.io/matejstrlek/uni_course_management:latest
+```
+(`docker start uni-course-management` on later runs, rather than `docker run` again.)
+
+**Run the suite**:
+```bash
+npx playwright test                       # everything
+npx playwright test --project=admin       # one role (also: public, professor, student, api)
+npx playwright test --ui                  # interactive UI mode
+npx playwright show-report                # last HTML report
+```
+
+`BASE_URL` (default `http://localhost:8081`, see `utils/env.ts`) is the only environment override most setups need.
+
+## Testing Strategy
+
+E2E testing's role in this project's QA isn't abstract — it maps directly onto where `uni_course_management`'s real risk lives, and that shapes how it differs from unit or integration testing here specifically. The app is a thin, mostly server-rendered orchestration layer (Spring MVC controllers + Thymeleaf templates + Spring Security's role hierarchy) over a handful of straightforward services and a small schema. Its riskiest behavior isn't computational: `GradeService.assignGrade()`'s clamp-and-upsert logic or `JwtService`'s token signing are exactly the narrow, pure-function surfaces unit tests cover cheaply and exhaustively — the Test Coverage Plan below says so explicitly, and this suite doesn't try to re-cover that ground.
+
+What unit or integration tests structurally *can't* see is the interaction between layers. Whether a role-guarded route actually redirects an unauthenticated visitor to `/login`. Whether a Thymeleaf template renders the *localized* button text (`messages.properties`) rather than its inline fallback — a real mismatch this suite caught in Phase 3, where `admin/courses/list.html`'s fallback text differed from what the browser actually showed. Whether grading a student really does make them vanish from the professor's own roster page on the very next render — a side effect that only exists at the intersection of `GradeService`'s `COMPLETED` status write and the roster query's `ENROLLED` filter, and the clearest example in this suite of a bug an E2E test catches that a unit test, testing each piece in isolation, structurally cannot.
+
+Integration tests (e.g. `@SpringBootTest` against a real `DataSource`) sit between the two — the right layer for verifying that `EnrollmentRestController`'s `@PreAuthorize` enforces `STUDENT`-only access at the Spring Security filter level, without a browser. But they still can't say whether the *user* — clicking a real "Enroll" button, reading a real flash message, waiting on a real CSV download — gets the experience the app is supposed to deliver. That gap is what this suite exists to close: role-based journeys across real page loads (`tests/admin/`, `tests/professor/`, `tests/student/`), the REST API's actual JSON contract independent of any UI (`tests/api/`), and the app's rendered failure states under conditions too slow or disruptive to reproduce for real (`tests/*/*-network.spec.ts`).
+
+None of this substitutes for unit or integration coverage this repo doesn't own — it tests the app as a black box, not its Java internals. It's deliberately the outermost, slowest, most expensive layer of a pyramid the Test Coverage Plan below sketches the rest of.
+
 ## Test Coverage Plan
 
 Maps the application's main features to the test layer best suited to it, and why. `uni_course_management` is a server-rendered Spring Boot + Thymeleaf app with a separate stateless JWT REST API — that shape is why several rows below land on E2E rather than component tests: there's no isolated component-rendering harness for Thymeleaf fragments in this stack, so UI-level behavior is only observable by driving the real page.
@@ -22,6 +64,61 @@ Maps the application's main features to the test layer best suited to it, and wh
 | REST enrollment lifecycle (`POST`/`GET`/`DELETE /api/enrollments`) | API | The same enroll/drop journey as the E2E row above, but exercised at the API contract level, independent of Thymeleaf rendering. `tests/api/enrollments.spec.ts` |
 | REST authorization boundary (grades endpoints' role check) | API | A permission-boundary question — cheapest and most precise to assert via direct HTTP calls with different bearer tokens, not a UI journey. `tests/api/grades.spec.ts` |
 
+## Architecture
+
+```
+tests/        testDir — the only thing Playwright discovers as specs.
+               Per-role subfolders (admin/, professor/, student/, public/, api/) + auth.setup.ts.
+pages/         Page Object Model, mirrors the app's own controller/template split.
+               BasePage.ts, LoginPage.ts, admin/, professor/, student/.
+fixtures/      fixtures/index.ts — one base.extend() merging every Page Object
+               into a single custom `test`, imported by every spec instead of @playwright/test directly.
+utils/         env.ts (baseURL/storageState paths), test-data.ts (seeded users/courses/ids),
+               api-client.ts (JWT login for API tests), axe.ts (accessibility allowlist).
+```
+
+`pages/`, `fixtures/`, and `utils/` are deliberately outside `testDir` so Playwright never mistakes support code for specs.
+
+**Fixture composition** — every spec and `auth.setup.ts` imports `test`/`expect` from `fixtures/index.ts`, never from `@playwright/test` directly:
+
+```mermaid
+flowchart LR
+  PT["@playwright/test<br/>base test"] --> FX["fixtures/index.ts<br/>base.extend({ loginPage, adminCoursesPage, ... })"]
+  BP["pages/BasePage.ts<br/>(logout, row helper)"] --> LP[LoginPage]
+  BP --> ACP[AdminCoursesPage]
+  BP --> PCP[ProfessorCoursesPage]
+  BP --> PGP[ProfessorGradingPage]
+  BP --> SCP[StudentCoursesPage]
+  BP --> SEP[StudentEnrollmentsPage]
+  LP --> FX
+  ACP --> FX
+  PCP --> FX
+  PGP --> FX
+  SCP --> FX
+  SEP --> FX
+  FX --> SPEC["tests/**/*.spec.ts<br/>import { test, expect } from '../../fixtures'"]
+```
+
+Every Page Object extends `BasePage` (shared `logout()` + a protected `row(text)` locator helper) instead of duplicating it — the same "small base, composed extensions" idea the spec's "login fixture built on a base fixture" example describes, just applied to Page Objects. The actual login/auth composition lives in `playwright.config.ts` instead: the `setup` project (matches `auth.setup.ts`) logs in as all three roles once and writes `playwright/.auth/{role}.json`; `admin`/`professor`/`student` each declare `dependencies: ['setup']` and load their role's `storageState`, so no spec ever re-does the login UI flow to reach an authenticated page. `public` needs neither (unauthenticated flows); `api` manages its own JWT per test via `utils/api-client.ts`.
+
+**Page Object layering**: each Page Object owns exactly one page or flow's locators and actions (`AdminCoursesPage` → `/admin/courses`, `ProfessorGradingPage` → `/professor/courses/{id}/students`) and is the only place that page's locators live — specs call `adminCoursesPage.createCourse(...)`, not `page.getByRole(...)`, for anything a Page Object already covers.
+
+**Readable reports**: non-trivial multi-phase tests (course create/edit, enroll/drop, grading, the API enrollment lifecycle) use `test.step()` to name each phase, so a failure's HTML report entry reads as "Fill out and submit the new-course form ✓ / Verify it appears in the course list ✗" instead of one opaque block.
+
+## Critical Evaluation
+
+**Weakness**: `uni_course_management` has no test-only reset endpoint and no per-request transaction rollback — its H2 database only reseeds on container **restart**, never between requests or test runs (`docs/API.md`'s own documented quirk, confirmed repeatedly this session). That's a real testability gap in the app itself: a test suite has no way to ask for a clean slate without tearing down and rebuilding the whole container, far too slow to do per-test or even per-file.
+
+**Concrete consequence**: an earlier version of this suite was written the way a fresh-database mental model tempts you to write it — asserting against specific seeded rows by name. `professor/grading.spec.ts` originally hardcoded a check for the seeded row `'Marinkovic'` with grade 4 on CS101, in the same file as a *different* test that grades away "whichever student is first" on that same CS101 roster. Both tests passed in isolation. Both broke for real, repeatedly, once the suite was actually re-run against one long-lived container across a working session — exactly the shape of bug this gap in the app predicts, and the incident the Flaky Test section below covers in full.
+
+**How the final structure addresses it**:
+1. Centralizes seed-data facts in `utils/test-data.ts` (`course`, `courseId`, `enrollmentId`) instead of scattering literal values, so which seed rows are "spoken for" by which test is visible in one place.
+2. Prefers throwaway entities over asserting exact counts: `admin/courses.spec.ts` creates its own `TEST101`-style courses and deletes them in `afterEach`, rather than depending on the seed roster staying a fixed size.
+3. Where a test genuinely needs a *specific* pre-seeded row, it's scoped to a course no other test ever mutates (`professor/grading.spec.ts`'s pre-seeded-grade test now reads MATH201, not CS101).
+4. `ProfessorGradingPage.gradeFirstAvailableStudent()` grades whichever row is first rather than a hardcoded name, since grading is a one-way mutation — the test adapts to whatever state exists instead of assuming a specific one.
+
+None of this removes the underlying gap — a real reset endpoint would still be strictly better — but it means this suite's own tests no longer compound the problem the way its earlier version did.
+
 ## Visual Regression
 
 `toHaveScreenshot()` baselines cover 4 pages/components: `/login` (public), `/admin/users` and `/admin/dashboard` (admin), `/professor/schedule` (professor) — `tests/public/visual.spec.ts`, `tests/admin/visual.spec.ts`, `tests/professor/visual.spec.ts`. All four disable animations (`animations: 'disabled'`) to avoid Bootstrap's fade-in transitions causing flaky diffs. `/admin/dashboard` additionally masks its 4 stat cards' live numbers (`mask: [page.locator('.card-body strong')]`) — those counts genuinely change run to run, since this same suite's own admin course-CRUD and student enroll/drop tests mutate the underlying data concurrently.
@@ -30,7 +127,7 @@ Pages were deliberately chosen to be otherwise stable: `/admin/users`, `/admin/d
 
 **A screenshot isn't proof you're on the right page.** Early in this phase, `/professor/schedule` had a real bug — a `ScheduleController` view-name typo made it 500 unconditionally — but the screenshot and axe baselines were captured against that 500 page anyway and kept "passing," since neither check asserts page identity, only that whatever rendered stays visually/structurally stable. Once the bug was fixed upstream, every visual spec's `beforeEach` was given a `getByRole('heading', {...})` assertion for that page's real heading, run before the screenshot/axe call, so a wrong-page regression fails loudly instead of silently baselining the wrong content.
 
-**Cross-platform caveat**: baselines are OS-specific (Playwright suffixes them `-win32`/`-linux`/`-darwin`). Both a Windows set (generated locally) and a Linux set (generated in a matching `mcr.microsoft.com/playwright` container, for CI's `ubuntu-latest` runner) are committed side by side — see the Debugging Walkthrough below for the real CI failure that happened before the Linux set existed.
+**Cross-platform caveat**: baselines are OS-specific (Playwright suffixes them `-win32`/`-linux`/`-darwin`). Both a Windows set (generated locally) and a Linux set (generated in a matching `mcr.microsoft.com/playwright` container, for CI's `ubuntu-latest` runner) are committed side by side — see the Debugging Walkthrough below for the real CI failure that happened before the Linux set existed, and a second round after it.
 
 ## Accessibility Findings
 
@@ -77,7 +174,7 @@ Diff:     test-results/.../login-diff.png
 
 The diff images from that run (downloaded from the failed run's `playwright-report` artifact) ruled out "wrong page" again: every diff showed the *same* content twice, offset by a few pixels, text subtly doubled — the signature of two renderers agreeing on layout but disagreeing on font metrics, not two different pages. `ubuntu-latest` + `npx playwright install --with-deps` and the `mcr.microsoft.com/playwright` Docker image both count as "linux" for baseline-suffix purposes, but they don't ship the same bundled font set, so text takes up very slightly different width in each — enough to fail `toHaveScreenshot()`'s pixel-diff threshold even though nothing was actually wrong. Confirmed by comparing the CI run's actual rendered screenshot side by side with the committed baseline: same structure, same data, a few pixels of drift throughout.
 
-**Real fix**: instead of trying to match fonts by hand on the bare runner, the CI workflow now runs the *test execution step itself* inside `mcr.microsoft.com/playwright:v1.62.1-noble` (`docker run --network=host ... npx playwright test --shard=...`), the exact image used to generate the baselines — so CI renders through the identical font set instead of an approximation of it. `playwright install --with-deps` was removed from the workflow entirely (no longer needed; the Docker image already has matching browsers bundled).
+**Real fix**: instead of trying to match fonts by hand on the bare runner, the CI workflow now runs the *test execution step itself* inside `mcr.microsoft.com/playwright:v1.62.1-noble` (`docker run --network=host ... npx playwright test --shard=...`), the exact image used to generate the baselines — so CI renders through the identical font set instead of an approximation of it. `playwright install --with-deps` was removed from the workflow entirely (no longer needed; the Docker image already has matching browsers bundled). Verified against a real CI run afterward: [`#31431332054`](https://github.com/MatejStrlek/Mater_thesis_final_project/actions/runs/31431332054) — both shards green, `merge-reports` green.
 
 ## Flaky Test — Race Condition or Real Defect?
 
@@ -85,24 +182,24 @@ The diff images from that run (downloaded from the failed run's `playwright-repo
 
 This failed for real, repeatedly, during this session: re-running the suite without restarting the container (quirk 1 above — mutating state persists until restart) eventually let the grading test consume *both* CS101 students across successive runs, at which point the pre-seeded-grade test's hardcoded row was simply gone and `getByRole('row', { name: 'Marinkovic' })` timed out.
 
-**Race condition or defect?** Neither, cleanly — a test-design defect that only *looks* like a race. Within a single run it isn't really racing (`gradeFirstAvailableStudent` deterministically grades whichever row the query returns first, so the two tests don't fight over an outcome in real time); the problem is across runs against the same long-lived container, where one test's mutation silently invalidates another test's assumption. That's exactly what Outcome 2's own minimum requirement warns against — "no shared mutable state between tests" — it only presented as intermittent because "how many prior runs happened since the last restart" is effectively random from the test's point of view.
+**Race condition or defect?** Neither, cleanly — a test-design defect that only *looks* like a race. Within a single run it isn't really racing (`gradeFirstAvailableStudent` deterministically grades whichever row the query returns first, so the two tests don't fight over an outcome in real time); the problem is across runs against the same long-lived container, where one test's mutation silently invalidates another test's assumption. That's exactly what Outcome 2's own minimum requirement warns against — "no shared mutable state between tests" — it only presented as intermittent because "how many prior runs happened since the last restart" is effectively random from the test's point of view. The Critical Evaluation section above traces this same incident back to its root cause in the app's own testability.
 
 **Fix applied**: moved `shows a pre-seeded grade for a still-active enrollment` off CS101 entirely, onto MATH201 (`course.math201` in `utils/test-data.ts`) — a different course mkrmpotic also teaches, with its own independent pair of pre-seeded graded enrollments (`data.sql` grade ids 3-4, vs. CS101's 1-2). No test in this suite ever mutates MATH201's roster, so the assertion is now immune to the other test's consumption of CS101 by construction, not by luck. Verified with `--repeat-each=3` against a single un-restarted container: 12/12 passed — the exact scenario that used to fail.
 
 ## Suite Health
 
-A representative local run on a freshly restarted container: **37/37 passed** (`npx playwright test`, ~9s). The CI run referenced above: 33 passed / 4 failed, all 4 explained and fixed above. No test is currently skipped or quarantined.
+A representative local run on a freshly restarted container: **37/37 passed** (`npx playwright test`, ~9s). The CI run referenced above: 33 passed / 4 failed, all 4 explained and fixed above; the follow-up run after the real fix: all green. No test is currently skipped or quarantined.
 
-**Quarantine strategy** (not currently needed, but the mechanism this suite would reach for): tag a flaky test's title with a marker like `@quarantine`, and add a project to `playwright.config.ts` that runs only `--grep @quarantine` with extra retries, wired into a separate CI job that's allowed to fail (`continue-on-error: true`) without blocking the main `e2e-tests` job. That keeps a known-flaky test's coverage intact and visible instead of deleting it outright, while stopping it from blocking merges. Both failures found this session had a real root cause and a real fix instead, so nothing currently needs this — but the professor-grading incident above is exactly the shape of bug this mechanism exists for, if a fix isn't immediately available next time.
+**Quarantine strategy** (not currently needed, but the mechanism this suite would reach for): tag a flaky test's title with a marker like `@quarantine`, and add a project to `playwright.config.ts` that runs only `--grep @quarantine` with extra retries, wired into a separate CI job that's allowed to fail (`continue-on-error: true`) without blocking the main `e2e-tests` job. That keeps a known-flaky test's coverage intact and visible instead of deleting it outright, while stopping it from blocking merges. Every failure found this session had a real root cause and a real fix instead, so nothing currently needs this — but the professor-grading incident above is exactly the shape of bug this mechanism exists for, if a fix isn't immediately available next time.
 
 ## CI Trade-off Analysis
 
-This suite currently has 37 tests completing in ~8–10s of actual test execution — small enough that most of a CI run's wall-clock time is fixed overhead (checkout, `npm ci`, `playwright install --with-deps`, pulling/starting/waiting on the target app's Docker image), not test time. That shapes every trade-off below.
+This suite currently has 37 tests completing in ~8–10s of actual test execution — small enough that most of a CI run's wall-clock time is fixed overhead (checkout, `npm ci`, pulling/starting/waiting on the target app's Docker image), not test time. That shapes every trade-off below.
 
 **Parallel workers** (multiple workers inside one job, one shared app container) are the cheapest form of parallelism — no extra runner, no extra app-container startup cost — but they're risky for this specific app. `uni_course_management`'s H2 database only resets on container restart (quirk 1 above), and Phase 6 found a real race from it: two API specs concurrently touching the same seeded student's enrollments intermittently tripped a server-side JSON-serialization bug. `playwright.config.ts`'s `workers: process.env.CI ? 1 : undefined` is a deliberate response — a single shared, mutating-state app container is safer serialized than parallelized. Locally, without that constraint, the default multi-worker count is fine because a developer notices a flake and re-runs; in CI, a flaky failure just blocks a PR.
 
-**Sharding** (separate jobs/runners, each with its own app container) sidesteps that risk entirely — each shard's mutations are isolated to its own container, so shards can safely run in parallel even though workers-within-a-job can't. That's the real reason this suite added a 2-shard matrix rather than just raising `workers` in CI: it's the safe axis of parallelism for an app with global mutable state. The cost is duplicated fixed overhead — two shards each pay their own `npm ci`, browser install, and Docker pull/start/wait, which for a suite this small can make total wall-clock time *worse* than one unsharded job, not better. Sharding only pays off once test execution time itself dominates that per-shard overhead; this suite isn't there yet, but the matrix + `merge-reports` plumbing (`.github/workflows/playwright.yml`) is in place for when it grows, gated with `if: ${{ !cancelled() }}` so a failed shard still shows up in the merged report instead of vanishing.
+**Sharding** (separate jobs/runners, each with its own app container) sidesteps that risk entirely — each shard's mutations are isolated to its own container, so shards can safely run in parallel even though workers-within-a-job can't. That's the real reason this suite added a 2-shard matrix rather than just raising `workers` in CI: it's the safe axis of parallelism for an app with global mutable state. The cost is duplicated fixed overhead — two shards each pay their own `npm ci` and Docker pull/start/wait, which for a suite this small can make total wall-clock time *worse* than one unsharded job, not better. Sharding only pays off once test execution time itself dominates that per-shard overhead; this suite isn't there yet, but the matrix + `merge-reports` plumbing (`.github/workflows/playwright.yml`) is in place for when it grows, gated with `if: ${{ !cancelled() }}` so a failed shard still shows up in the merged report instead of vanishing.
 
-**Retries** (`retries: 2` in CI) exist for genuine environmental flakiness — a slow CDN asset, a momentarily slow DB query — not to paper over a deterministic bug. Phase 9's debugging walkthrough leaned on exactly this distinction: a failure that survives 2 retries isn't flaky, it's real, which is what pointed at the missing Linux baseline rather than a timing issue.
+**Retries** (`retries: 2` in CI) exist for genuine environmental flakiness — a slow CDN asset, a momentarily slow DB query — not to paper over a deterministic bug. The Debugging Walkthrough above leaned on exactly this distinction twice: a failure that survives 2 retries isn't flaky, it's real, which is what pointed at the missing Linux baseline (and later, the font mismatch) rather than a timing issue.
 
 **Recommendation for this suite today**: keep `workers: 1` in CI (protects the one shared, stateful app container per job), keep the 2-shard matrix (demonstrates the safe parallelism axis and roughly halves wall-clock test time without risking cross-worker races), keep `retries: 2` for genuine transient flakiness. Revisit the shard count upward only once test execution time meaningfully exceeds the fixed per-shard setup cost — worth re-measuring once the suite is past roughly 100 tests.

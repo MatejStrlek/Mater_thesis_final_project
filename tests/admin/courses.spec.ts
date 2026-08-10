@@ -24,25 +24,38 @@ test.describe('Admin course management', () => {
   });
 
   test('creates a new course', async ({ adminCoursesPage }) => {
-    await adminCoursesPage.createCourse({
-      courseCode: 'TEST101',
-      courseName: 'New Verification Course',
-      credits: 3,
+    await test.step('Fill out and submit the new-course form', async () => {
+      await adminCoursesPage.createCourse({
+        courseCode: 'TEST101',
+        courseName: 'New Verification Course',
+        credits: 3,
+      });
+      createdCourseCodes.push('TEST101');
     });
-    createdCourseCodes.push('TEST101');
-    await adminCoursesPage.expectCourseVisible('TEST101');
+
+    await test.step('Verify it appears in the course list', async () => {
+      await adminCoursesPage.expectCourseVisible('TEST101');
+    });
   });
 
   test('edits an existing course', async ({ adminCoursesPage }) => {
-    await adminCoursesPage.createCourse({
-      courseCode: 'TEST102',
-      courseName: 'Editable Course',
-      credits: 3,
+    await test.step('Create a course to edit', async () => {
+      await adminCoursesPage.createCourse({
+        courseCode: 'TEST102',
+        courseName: 'Editable Course',
+        credits: 3,
+      });
+      createdCourseCodes.push('TEST102');
     });
-    createdCourseCodes.push('TEST102');
-    await adminCoursesPage.goto();
-    await adminCoursesPage.editCourse('TEST102', { courseName: 'Renamed Course' });
-    await expect(adminCoursesPage.courseRow('TEST102')).toContainText('Renamed Course');
+
+    await test.step('Edit its name', async () => {
+      await adminCoursesPage.goto();
+      await adminCoursesPage.editCourse('TEST102', { courseName: 'Renamed Course' });
+    });
+
+    await test.step('Verify the new name is reflected in the list', async () => {
+      await expect(adminCoursesPage.courseRow('TEST102')).toContainText('Renamed Course');
+    });
   });
 
   test('deletes a course', async ({ adminCoursesPage }) => {

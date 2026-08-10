@@ -28,8 +28,13 @@ test.describe('Professor grading', () => {
   test('grading a student completes their enrollment and removes them from the active roster', async ({
     professorGradingPage,
   }) => {
-    const gradedStudent = await professorGradingPage.gradeFirstAvailableStudent(5);
-    await professorGradingPage.expectNotInRoster(gradedStudent);
+    const gradedStudent = await test.step('Grade the first available student', async () => {
+      return professorGradingPage.gradeFirstAvailableStudent(5);
+    });
+
+    await test.step('Verify they no longer appear in the active roster', async () => {
+      await professorGradingPage.expectNotInRoster(gradedStudent);
+    });
   });
 
   test('exports the course roster as a CSV download', async ({ professorGradingPage }) => {
