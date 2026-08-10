@@ -34,6 +34,10 @@ test.describe('Admin dashboard — visual', () => {
     // student/courses.spec.ts create and enroll/drop real rows concurrently,
     // so the counts vary run to run. Masking them is what keeps this
     // baseline meaningful instead of flaking on every parallel run.
+    // CSS locator, not a user-facing one: the numbers are bare <strong> text
+    // with no role/label distinguishing them from the rest of the card, so
+    // there's no getByRole/getByLabel/getByText equivalent to select "the
+    // number" specifically without also matching the surrounding label text.
     await expect(page).toHaveScreenshot('admin-dashboard.png', {
       animations: 'disabled',
       mask: [page.locator('.card-body strong')],
