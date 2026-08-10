@@ -21,6 +21,18 @@ export const primaryUsers: Record<Role, SeedUser> = {
 };
 
 /**
+ * Student used by API-level enrollment tests instead of primaryUsers.student
+ * (sivanovic). sivanovic's seeded enrollment (id 1, CS101) already has a
+ * grade, and Enrollment<->Grade is a bidirectional Jackson relation with no
+ * @JsonIgnore/@JsonManagedReference — GET /api/enrollments for any student
+ * holding a graded enrollment fails server-side with a JSON nesting-depth
+ * error. mgalic's two seeded enrollments (ENG101, CS201) are both ungraded,
+ * so GET /api/enrollments works normally for her. Confirmed via direct curl
+ * against the running app (Phase 6).
+ */
+export const apiEnrollmentTestStudent: SeedUser = { username: 'mgalic', password: SEED_PASSWORD, role: 'student' };
+
+/**
  * Full seeded roster (uni_course_management's src/main/resources/data.sql),
  * for tests needing a second account of a role — e.g. permission-boundary
  * checks ("professor B can't grade professor A's course") or data-driven
@@ -40,7 +52,7 @@ export const allUsers: SeedUser[] = [
   { username: 'mstojanovic', password: SEED_PASSWORD, role: 'student' },
   { username: 'njakovljevic', password: SEED_PASSWORD, role: 'student' },
   { username: 'tmitrovic', password: SEED_PASSWORD, role: 'student' },
-  { username: 'mgalic', password: SEED_PASSWORD, role: 'student' },
+  apiEnrollmentTestStudent,
 ];
 
 /**
@@ -58,4 +70,40 @@ export const course = {
   phy201: 'PHY201',
   /** Creative Writing — likewise not pre-enrolled; used for a second, independent enroll/drop test. */
   eng201: 'ENG201',
+  /** Linear Algebra — see courseId.math301; used by the API-level enroll/drop lifecycle test. */
+  math301: 'MATH301',
+} as const;
+
+/**
+ * Numeric primary keys for the same seeded courses, needed by API-level
+ * tests (the /api/enrollments endpoints take a courseId, not a code).
+ * Per docs/API.md in the target app repo: "Ids are assigned in insertion
+ * order starting at 1, so they're safe to hardcode ... as long as
+ * data.sql isn't edited."
+ */
+export const courseId = {
+  /** Linear Algebra — courses 12-15 have zero seeded enrollments, and no UI spec touches it either; kept clear for the API enroll/drop lifecycle test. */
+  math301: 12,
+  /**
+   * World History — primaryUsers.student's (sivanovic) enrollment here (id
+   * enrollmentId.sivanovicHist101) is seeded ungraded. Deliberately not one
+   * of apiEnrollmentTestStudent's (mgalic) courses: the grades test POSTs a
+   * grade to it, and running that concurrently with enrollments.spec.ts's
+   * GET /api/enrollments for the same student would (and once did, under
+   * fullyParallel) intermittently trip the circular-serialization bug
+   * documented on apiEnrollmentTestStudent above.
+   */
+  hist101: 5,
+} as const;
+
+/**
+ * Seeded enrollment ids referenced by API-level tests. Per docs/API.md,
+ * grades exist on enrollment ids 1-6 only — anything above that is
+ * ungraded, so GradeService.assignGrade() treats a POST against it as a
+ * fresh grade rather than an overwrite (though it upserts either way, so
+ * this is safe to rerun regardless).
+ */
+export const enrollmentId = {
+  /** primaryUsers.student (sivanovic) x HIST101 (courseId.hist101), seeded ungraded. */
+  sivanovicHist101: 8,
 } as const;
