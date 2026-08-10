@@ -20,8 +20,6 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
     - name: Start target app (uni_course_management)
       run: |
         docker run -d --name uni-course-management -p 8081:8081 \
@@ -42,8 +40,23 @@ jobs:
         echo "App did not become ready in time"
         docker logs uni-course-management
         exit 1
+    # Runs the actual test/render step inside the same Playwright Docker
+    # image used to generate the committed screenshot baselines (see
+    # README's Debugging Walkthrough), instead of `playwright install
+    # --with-deps` on the bare runner — the two don't render text
+    # identically (different bundled font sets), which broke every
+    # toHaveScreenshot() assertion in this workflow's first sharded run
+    # despite matching OS platform suffixes. --network=host lets the
+    # container reach the app already published on the runner's
+    # localhost:8081 above.
     - name: Run Playwright tests (shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
-      run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --reporter=blob
+      run: |
+        docker run --rm --network=host \
+          -v ${{ github.workspace }}:/work -w /work \
+          -e BASE_URL=http://localhost:8081 \
+          -e CI=true \
+          mcr.microsoft.com/playwright:v1.62.1-noble \
+          npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --reporter=blob
     - name: Dump app logs on failure
       if: failure()
       run: docker logs uni-course-management
