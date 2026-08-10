@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures';
 import { primaryUsers, courseId, enrollmentId } from '../../utils/test-data';
-import { loginViaApi } from '../../utils/api-client';
+import { apiAuthHeaders } from '../../utils/api-client';
 
 test.describe('Grades API', () => {
   // Permission-boundary check: an admin JWT can grade and read grades
@@ -8,8 +8,7 @@ test.describe('Grades API', () => {
   // have an 'ADMINISTRATOR' typo instead of 'ADMIN' — see CLAUDE.md's known
   // quirks for that history — fixed upstream since.)
   test('an admin JWT can use both grade endpoints directly (ADMIN role)', async ({ request }) => {
-    const { accessToken } = await loginViaApi(request, primaryUsers.admin.username, primaryUsers.admin.password);
-    const headers = { Authorization: `Bearer ${accessToken}` };
+    const headers = await apiAuthHeaders(request, primaryUsers.admin.username, primaryUsers.admin.password);
 
     // Idempotent: GradeService.assignGrade() upserts by enrollmentId, so
     // rerunning this against the same seeded enrollment is always safe.
