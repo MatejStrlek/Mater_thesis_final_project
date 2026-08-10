@@ -8,6 +8,11 @@ jobs:
   e2e-tests:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2]
+        shardTotal: [2]
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
@@ -37,11 +42,41 @@ jobs:
         echo "App did not become ready in time"
         docker logs uni-course-management
         exit 1
-    - name: Run Playwright tests
-      run: npx playwright test
+    - name: Run Playwright tests (shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
+      run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --reporter=blob
     - name: Dump app logs on failure
       if: failure()
       run: docker logs uni-course-management
+    - name: Upload blob report (shard ${{ matrix.shardIndex }})
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: blob-report-${{ matrix.shardIndex }}
+        path: blob-report/
+        retention-days: 30
+
+  merge-reports:
+    # Runs even if a shard failed (not just on success) so the merged report
+    # still reflects that failure instead of silently omitting it — only
+    # skipped if the whole workflow was cancelled.
+    if: ${{ !cancelled() }}
+    needs: [ e2e-tests ]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    - name: Download blob reports from all shards
+      uses: actions/download-artifact@v4
+      with:
+        path: all-blob-reports
+        pattern: blob-report-*
+        merge-multiple: true
+    - name: Merge into a single HTML report
+      run: npx playwright merge-reports --reporter html ./all-blob-reports
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
