@@ -2,8 +2,6 @@
 
 Playwright test suite for [`uni_course_management`](https://github.com/MatejStrlek/uni_course_management), built as the reference implementation for the *End-to-End Test Automation with Playwright* course's final project specification (see `docs/PROJECT-SPECIFICATION.md`).
 
-> This README is written incrementally as the suite is built. Sections such as setup instructions, testing strategy, architecture, and CI trade-offs are added in later phases — see `CLAUDE.md`'s build plan for status.
-
 ## Test Coverage Plan
 
 Maps the application's main features to the test layer best suited to it, and why. `uni_course_management` is a server-rendered Spring Boot + Thymeleaf app with a separate stateless JWT REST API — that shape is why several rows below land on E2E rather than component tests: there's no isolated component-rendering harness for Thymeleaf fragments in this stack, so UI-level behavior is only observable by driving the real page.
@@ -32,7 +30,7 @@ Pages were deliberately chosen to be otherwise stable: `/admin/users`, `/admin/d
 
 **A screenshot isn't proof you're on the right page.** Early in this phase, `/professor/schedule` had a real bug — a `ScheduleController` view-name typo made it 500 unconditionally — but the screenshot and axe baselines were captured against that 500 page anyway and kept "passing," since neither check asserts page identity, only that whatever rendered stays visually/structurally stable. Once the bug was fixed upstream, every visual spec's `beforeEach` was given a `getByRole('heading', {...})` assertion for that page's real heading, run before the screenshot/axe call, so a wrong-page regression fails loudly instead of silently baselining the wrong content.
 
-**Cross-platform caveat**: baselines are OS-specific (Playwright suffixes them `-win32`/`-linux`/`-darwin`), generated here on Windows. CI runs on `ubuntu-latest` and will need its own Linux baselines — see the CI trade-off analysis (Phase 11) for how that's handled.
+**Cross-platform caveat**: baselines are OS-specific (Playwright suffixes them `-win32`/`-linux`/`-darwin`). Both a Windows set (generated locally) and a Linux set (generated in a matching `mcr.microsoft.com/playwright` container, for CI's `ubuntu-latest` runner) are committed side by side — see the Debugging Walkthrough below for the real CI failure that happened before the Linux set existed.
 
 ## Accessibility Findings
 
@@ -46,3 +44,49 @@ Scanned the same 3 authenticated/public pages used above for visual regression w
 | `page-has-heading-one` (moderate) — pages use `<h2>`/`<h3>` instead of `<h1>` for their primary heading | login, admin/users | **Accepted.** The heading text itself (`"User Management"`, `"My Schedule"`) is still present and meaningful to assistive tech; this is a heading-*level* choice, not a loss of information. |
 
 **What automated scanning does and doesn't guarantee**: `axe-core` reliably catches objectively-wrong markup — a missing attribute, an insufficient contrast ratio, a missing landmark — cheaply enough to run on every commit. What it can't tell you is whether the app is actually *usable* with a screen reader: whether tab order matches visual order, whether a form's validation errors get announced when they appear, whether the CSV download flow makes sense narrated aloud, whether a dropdown traps focus correctly. Every violation found here is a DOM-structure fact a machine can check in isolation; none of them substitute for someone actually navigating the app with a keyboard and a screen reader, which this suite doesn't do. "Zero axe violations" is a floor, not a certification.
+
+## Debugging Walkthrough
+
+Trace recording is configured in `playwright.config.ts` (`trace: 'on-first-retry'`), and the CI workflow uploads `playwright-report/` as a build artifact on every run (`actions/upload-artifact@v4`, `if: ${{ !cancelled() }}`) — open it locally with `npx playwright show-report` to browse the same report CI produced, traces included.
+
+A real CI run ([`#31427516827`](https://github.com/MatejStrlek/Mater_thesis_final_project/actions/runs/31427516827), 2026-08-10) failed like this:
+
+```
+4 failed
+    [public] › tests/public/visual.spec.ts › Login page — visual & accessibility › matches its visual baseline
+    [admin] › tests/admin/visual.spec.ts › Admin users — visual & accessibility › matches its visual baseline
+    [admin] › tests/admin/visual.spec.ts › Admin dashboard — visual › matches its visual baseline, with live stat counts masked
+    [professor] › tests/professor/visual.spec.ts › Professor schedule — visual & accessibility › matches its visual baseline
+  33 passed
+```
+
+Every failure was a `toHaveScreenshot()` assertion — nothing else, including the axe scans on those same 3 pages. The workflow's `retries: 2` (combined with `trace: 'on-first-retry'`) meant each of those 4 had already been retried twice and still failed, which rules out ordinary timing flakiness — a retry absorbs that, not a deterministic mismatch. A failure isolated to exactly one assertion *type*, reproducible on every retry, points at that assertion's own precondition rather than the app: `toHaveScreenshot()` baselines are OS-suffixed (`login-public-win32.png` locally; CI's `ubuntu-latest` runner needs `login-public-linux.png`), and only the Windows-generated set had been committed at that point — CI had no Linux baseline to compare against.
+
+To exercise the actual HTML-report/trace-viewer workflow (the real CI job logs need repo-admin auth this session didn't have), the same failure mode was reproduced locally: a wrong baseline was swapped into `login-public-win32.png` and the test re-run with `--trace=on`. The HTML report's diff view showed it immediately —
+
+```
+178219 pixels (ratio 0.20 of all image pixels) are different.
+Expected: tests/public/visual.spec.ts-snapshots/login-public-win32.png
+Received: test-results/.../login-actual.png
+Diff:     test-results/.../login-diff.png
+```
+
+— with the diff image overlaying the (wrong) admin-users page directly on top of the real login page in red. The trace viewer's action list showed the test itself behaved correctly (`goto('/login')`, the heading assertion passed, the screenshot was captured) — the mismatch was entirely in what the assertion was compared *against*, not in what actually rendered. That's the tell: functional steps green, one visual assertion red, diff pointing at "wrong expected image" rather than "wrong page."
+
+**Fix**: generated real Linux baselines by running the visual specs inside `mcr.microsoft.com/playwright:v1.62.1-noble` (matching the installed `@playwright/test` version) against the same locally-running app container, reachable from the Playwright container at `host.docker.internal:8081`. Both `-win32` and `-linux` baselines are now committed side by side, so Windows development and the Linux CI runner each compare against their own platform's baseline.
+
+## Flaky Test — Race Condition or Real Defect?
+
+`tests/professor/grading.spec.ts` used to have two tests sharing CS101's roster: `grading a student completes their enrollment...` grades whichever student is "first available" in the active roster (`ProfessorGradingPage.gradeFirstAvailableStudent()` — deliberately not a hardcoded name, since grading is one-way), while `shows a pre-seeded grade for a still-active enrollment` asserted a specific hardcoded seeded row (`Marinkovic`, grade 4) was still there. CS101 has exactly 2 seeded enrollments, both pre-graded in `data.sql` but still `ENROLLED` — both are equally valid "first available" targets.
+
+This failed for real, repeatedly, during this session: re-running the suite without restarting the container (quirk 1 above — mutating state persists until restart) eventually let the grading test consume *both* CS101 students across successive runs, at which point the pre-seeded-grade test's hardcoded row was simply gone and `getByRole('row', { name: 'Marinkovic' })` timed out.
+
+**Race condition or defect?** Neither, cleanly — a test-design defect that only *looks* like a race. Within a single run it isn't really racing (`gradeFirstAvailableStudent` deterministically grades whichever row the query returns first, so the two tests don't fight over an outcome in real time); the problem is across runs against the same long-lived container, where one test's mutation silently invalidates another test's assumption. That's exactly what Outcome 2's own minimum requirement warns against — "no shared mutable state between tests" — it only presented as intermittent because "how many prior runs happened since the last restart" is effectively random from the test's point of view.
+
+**Fix applied**: moved `shows a pre-seeded grade for a still-active enrollment` off CS101 entirely, onto MATH201 (`course.math201` in `utils/test-data.ts`) — a different course mkrmpotic also teaches, with its own independent pair of pre-seeded graded enrollments (`data.sql` grade ids 3-4, vs. CS101's 1-2). No test in this suite ever mutates MATH201's roster, so the assertion is now immune to the other test's consumption of CS101 by construction, not by luck. Verified with `--repeat-each=3` against a single un-restarted container: 12/12 passed — the exact scenario that used to fail.
+
+## Suite Health
+
+A representative local run on a freshly restarted container: **37/37 passed** (`npx playwright test`, ~9s). The CI run referenced above: 33 passed / 4 failed, all 4 explained and fixed above. No test is currently skipped or quarantined.
+
+**Quarantine strategy** (not currently needed, but the mechanism this suite would reach for): tag a flaky test's title with a marker like `@quarantine`, and add a project to `playwright.config.ts` that runs only `--grep @quarantine` with extra retries, wired into a separate CI job that's allowed to fail (`continue-on-error: true`) without blocking the main `e2e-tests` job. That keeps a known-flaky test's coverage intact and visible instead of deleting it outright, while stopping it from blocking merges. Both failures found this session had a real root cause and a real fix instead, so nothing currently needs this — but the professor-grading incident above is exactly the shape of bug this mechanism exists for, if a fix isn't immediately available next time.

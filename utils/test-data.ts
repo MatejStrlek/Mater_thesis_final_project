@@ -60,6 +60,15 @@ export const course = {
   eng201: 'ENG201',
   /** Linear Algebra — see courseId.math301; used by the API-level enroll/drop lifecycle test. */
   math301: 'MATH301',
+  /**
+   * Calculus I — owned by mkrmpotic, with its own 2 pre-seeded graded
+   * enrollments (ids 3-4), separate from CS101's (ids 1-2). Deliberately
+   * used by a different professor/grading.spec.ts test than CS101 — see
+   * Phase 9's suite-health note in README.md for why sharing one course
+   * between "reads a pre-seeded grade" and "grades away the first
+   * available student" caused real, repeated failures this session.
+   */
+  math201: 'MATH201',
 } as const;
 
 /**
