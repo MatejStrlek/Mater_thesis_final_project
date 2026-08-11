@@ -66,14 +66,21 @@ Maps the application's main features to the test layer best suited to it, and wh
 | REST course listing (`GET /api/courses`) | API | Same reasoning — verifies the JSON contract directly rather than through rendered HTML. `tests/api/courses.spec.ts` |
 | REST enrollment lifecycle (`POST`/`GET`/`DELETE /api/enrollments`) | API | The same enroll/drop journey as the E2E row above, but exercised at the API contract level, independent of Thymeleaf rendering. `tests/api/enrollments.spec.ts` |
 | REST authorization boundary (grades endpoints' role check) | API | A permission-boundary question — cheapest and most precise to assert via direct HTTP calls with different bearer tokens, not a UI journey. `tests/api/grades.spec.ts` |
+| Admin schedule CRUD (create/edit/delete) | E2E | Same shape as admin course CRUD — auth, role guard, form validation, persistence, redirect, as one journey. `tests/admin/schedule.spec.ts` |
+| Admin user management (create/edit/delete, role filter) | E2E | A real admin operator journey through Spring Security-backed account management, not isolated logic. `tests/admin/users.spec.ts` |
+| Course content CRUD + publish toggle (admin and professor) | E2E | Two roles reach the same feature through different UIs with a real behavioral difference (professor's delete is a confirm *modal*, admin's is a `window.confirm()` dialog) — only observable end to end. `tests/admin/content.spec.ts`, `tests/professor/content.spec.ts` |
+| Student course-content viewing | E2E | Inherently cross-role: only admin/professor can publish content, only a real student session proves it's visible — exercised as one sequential admin-create → student-view journey. `tests/shared/student-content.spec.ts` |
+| Localization / i18n (language switcher across roles, content-bearing pages) | E2E | `messages.properties`/`messages_hr.properties`/`messages_de.properties` only take effect through a rendered Thymeleaf page — no unit-level way to observe them. `tests/shared/localization.spec.ts` |
 
 ## Architecture
 
 ```
 tests/        testDir — the only thing Playwright discovers as specs.
-               Per-role subfolders (admin/, professor/, student/, public/, api/) + auth.setup.ts.
+               Per-role subfolders (admin/, professor/, student/, public/, api/)
+               + shared/ (role-agnostic specs that log in fresh — localization, cross-role
+               content viewing) + auth.setup.ts.
 pages/         Page Object Model, mirrors the app's own controller/template split.
-               BasePage.ts, LoginPage.ts, admin/, professor/, student/.
+               BasePage.ts, LoginPage.ts, DashboardPage.ts, admin/, professor/, student/.
 fixtures/      fixtures/index.ts — one base.extend() merging every Page Object
                into a single custom `test`, imported by every spec instead of @playwright/test directly.
 utils/         env.ts (baseURL/storageState paths), test-data.ts (seeded users/courses/ids),
@@ -87,24 +94,38 @@ utils/         env.ts (baseURL/storageState paths), test-data.ts (seeded users/c
 ```mermaid
 flowchart LR
   PT["@playwright/test<br/>base test"] --> FX["fixtures/index.ts<br/>base.extend({ loginPage, adminCoursesPage, ... })"]
-  BP["pages/BasePage.ts<br/>(logout, row helper)"] --> LP[LoginPage]
+  BP["pages/BasePage.ts<br/>(logout, switchLanguage, row helper)"] --> LP[LoginPage]
+  BP --> DP[DashboardPage]
   BP --> ACP[AdminCoursesPage]
+  BP --> ASP[AdminSchedulePage]
+  BP --> AUP[AdminUsersPage]
+  BP --> ACCP[AdminCourseContentPage]
   BP --> PCP[ProfessorCoursesPage]
   BP --> PGP[ProfessorGradingPage]
+  BP --> PCCP[ProfessorCourseContentPage]
   BP --> SCP[StudentCoursesPage]
   BP --> SEP[StudentEnrollmentsPage]
+  BP --> SCCP[StudentCourseContentPage]
   LP --> FX
+  DP --> FX
   ACP --> FX
+  ASP --> FX
+  AUP --> FX
+  ACCP --> FX
   PCP --> FX
   PGP --> FX
+  PCCP --> FX
   SCP --> FX
   SEP --> FX
+  SCCP --> FX
   FX --> SPEC["tests/**/*.spec.ts<br/>import { test, expect } from '../../fixtures'"]
 ```
 
-Every Page Object extends `BasePage` (shared `logout()` + a protected `row(text)` locator helper) instead of duplicating it — the same "small base, composed extensions" idea the spec's "login fixture built on a base fixture" example describes, just applied to Page Objects. The actual login/auth composition lives in `playwright.config.ts` instead: the `setup` project (matches `auth.setup.ts`) logs in as all three roles once and writes `playwright/.auth/{role}.json`; `admin`/`professor`/`student` each declare `dependencies: ['setup']` and load their role's `storageState`, so no spec ever re-does the login UI flow to reach an authenticated page. `public` needs neither (unauthenticated flows); `api` manages its own JWT per test via `utils/api-client.ts`.
+Every Page Object extends `BasePage` (shared `logout()`, `switchLanguage()`, and a protected `row(text)` locator helper) instead of duplicating it — the same "small base, composed extensions" idea the spec's "login fixture built on a base fixture" example describes, just applied to Page Objects. The actual login/auth composition lives in `playwright.config.ts` instead: the `setup` project (matches `auth.setup.ts`) logs in as all three roles once and writes `playwright/.auth/{role}.json`; `admin`/`professor`/`student` each declare `dependencies: ['setup']` and load their role's `storageState`, so no spec ever re-does the login UI flow to reach an authenticated page. `public` and `api` need neither (unauthenticated flows / own JWT per test via `utils/api-client.ts`). `shared` is the deliberate exception: specs there log in fresh every test instead of reusing storageState, for two different reasons — `localization.spec.ts` because switching language mutates *session*-scoped state two tests sharing a `JSESSIONID` would otherwise race on, and `student-content.spec.ts` because it's inherently cross-role (an admin publishes content, a student views it) and needs one sequential, single-session journey rather than two roles' state overlapping — see the Critical Evaluation section for why mixing roles more aggressively than that (an isolated API call alongside a live page of a different role) isn't safe in this app.
 
 **Page Object layering**: each Page Object owns exactly one page or flow's locators and actions (`AdminCoursesPage` → `/admin/courses`, `ProfessorGradingPage` → `/professor/courses/{id}/students`) and is the only place that page's locators live — specs call `adminCoursesPage.createCourse(...)`, not `page.getByRole(...)`, for anything a Page Object already covers.
+
+**Locator strategy**: role/label locators (`getByRole`, `getByLabel`) are the default — they double as an accessibility check, since a locator that only exists via `getByRole` proves the element is exposed correctly to assistive tech. `data-testid` is used instead in two specific situations, not as a blanket replacement: elements whose accessible text is state-dependent (the language dropdown's own toggle reads "EN"/"HR"/"DE", so it can't be found by its own changing name) or `th:text="#{...}"`-driven i18n text that has no reason to be stable (nav actions like "Edit"/"Delete"/"Enroll"/"Logout" render differently per locale, and this suite already hit a real bug from exactly that class of fragility — see the Flaky Test section's session-locale race). Row-scoped actions match by `[data-testid^="prefix-"]` (attribute-prefix) rather than the full id-suffixed value, since the row's numeric database id is never known to a test before it creates that row — course codes, room names, and content titles remain the way rows themselves are found, since those are data, not translated labels.
 
 **Readable reports**: non-trivial multi-phase tests (course create/edit, enroll/drop, grading, the API enrollment lifecycle) use `test.step()` to name each phase, so a failure's HTML report entry reads as "Fill out and submit the new-course form ✓ / Verify it appears in the course list ✗" instead of one opaque block.
 
@@ -193,13 +214,13 @@ This failed for real, repeatedly, during this session: re-running the suite with
 
 ## Suite Health
 
-A representative local run on a freshly restarted container: **37/37 passed** (`npx playwright test`, ~9s). The CI run referenced above: 33 passed / 4 failed, all 4 explained and fixed above; the follow-up run after the real fix: all green. No test is currently skipped or quarantined.
+A representative local run on a freshly restarted container: **64/64 passed** (`npx playwright test`, ~15s) — up from 37/37 at Phase 12, after the backlog additions covering admin schedule/user/content CRUD, student content viewing, and expanded localization coverage. The CI run referenced above (from the 37-test suite): 33 passed / 4 failed, all 4 explained and fixed above; the follow-up run after the real fix: all green. No test is currently skipped or quarantined.
 
 **Quarantine strategy** (not currently needed, but the mechanism this suite would reach for): tag a flaky test's title with a marker like `@quarantine`, and add a project to `playwright.config.ts` that runs only `--grep @quarantine` with extra retries, wired into a separate CI job that's allowed to fail (`continue-on-error: true`) without blocking the main `e2e-tests` job. That keeps a known-flaky test's coverage intact and visible instead of deleting it outright, while stopping it from blocking merges. Every failure found this session had a real root cause and a real fix instead, so nothing currently needs this — but the professor-grading incident above is exactly the shape of bug this mechanism exists for, if a fix isn't immediately available next time.
 
 ## CI Trade-off Analysis
 
-This suite currently has 37 tests completing in ~8–10s of actual test execution — small enough that most of a CI run's wall-clock time is fixed overhead (checkout, `npm ci`, pulling/starting/waiting on the target app's Docker image), not test time. That shapes every trade-off below.
+This suite currently has 64 tests completing in ~15s of actual test execution — small enough that most of a CI run's wall-clock time is fixed overhead (checkout, `npm ci`, pulling/starting/waiting on the target app's Docker image), not test time. That shapes every trade-off below.
 
 **Parallel workers** (multiple workers inside one job, one shared app container) are the cheapest form of parallelism — no extra runner, no extra app-container startup cost — but they're risky for this specific app. `uni_course_management`'s H2 database only resets on container restart (quirk 1 above), and Phase 6 found a real race from it: two API specs concurrently touching the same seeded student's enrollments intermittently tripped a server-side JSON-serialization bug. `playwright.config.ts`'s `workers: process.env.CI ? 1 : undefined` is a deliberate response — a single shared, mutating-state app container is safer serialized than parallelized. Locally, without that constraint, the default multi-worker count is fine because a developer notices a flake and re-runs; in CI, a flaky failure just blocks a PR.
 
