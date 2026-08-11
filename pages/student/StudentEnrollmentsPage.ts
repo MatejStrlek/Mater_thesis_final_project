@@ -13,7 +13,7 @@ export class StudentEnrollmentsPage extends BasePage {
 
   async drop(courseCode: string) {
     this.page.once('dialog', (dialog) => dialog.accept());
-    await this.enrollmentRow(courseCode).getByRole('button', { name: 'Drop' }).click();
+    await this.enrollmentRow(courseCode).locator('[data-testid^="drop-enrollment-"]').click();
   }
 
   async expectEnrolled(courseCode: string) {

@@ -19,7 +19,7 @@ export class AdminCoursesPage extends BasePage {
   }
 
   async gotoCreate() {
-    await this.page.getByRole('link', { name: 'Add New Course' }).click();
+    await this.page.getByTestId('create-course-button').click();
   }
 
   courseRow(courseCode: string): Locator {
@@ -42,18 +42,24 @@ export class AdminCoursesPage extends BasePage {
   async createCourse(data: CourseFormData) {
     await this.gotoCreate();
     await this.fillForm(data);
-    await this.page.getByRole('button', { name: 'Create Course' }).click();
+    await this.page.getByTestId('course-form-submit').click();
   }
 
+  /**
+   * The row itself is still found by course code (data, not a label — not
+   * i18n-sensitive), but "Edit" is: `[data-testid^="edit-course-"]` matches
+   * the row's edit link without needing its numeric course id, which isn't
+   * known to callers passing a course code.
+   */
   async editCourse(courseCode: string, data: Partial<CourseFormData>) {
-    await this.courseRow(courseCode).getByRole('link', { name: 'Edit' }).click();
+    await this.courseRow(courseCode).locator('[data-testid^="edit-course-"]').click();
     await this.fillForm(data);
-    await this.page.getByRole('button', { name: 'Update Course' }).click();
+    await this.page.getByTestId('course-form-submit').click();
   }
 
   async deleteCourse(courseCode: string) {
     this.page.once('dialog', (dialog) => dialog.accept());
-    await this.courseRow(courseCode).getByRole('button', { name: 'Delete' }).click();
+    await this.courseRow(courseCode).locator('[data-testid^="delete-course-"]').click();
   }
 
   async expectCourseVisible(courseCode: string) {

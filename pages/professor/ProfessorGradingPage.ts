@@ -38,14 +38,17 @@ export class ProfessorGradingPage extends BasePage {
     // `strong` isolates the last name within the cell; no ARIA role
     // distinguishes last name from first name inside the same table cell.
     const lastName = await firstRow.locator('strong').innerText();
-    await firstRow.getByRole('spinbutton').fill(String(grade));
-    await firstRow.getByRole('button', { name: 'Save' }).click();
+    // The enrollment id isn't known ahead of time ("first available" is
+    // dynamic), so these match by testid prefix within the row rather than
+    // the full `grade-input-{id}` / `grade-save-{id}` value.
+    await firstRow.locator('[data-testid^="grade-input-"]').fill(String(grade));
+    await firstRow.locator('[data-testid^="grade-save-"]').click();
     return lastName;
   }
 
   async exportCsv(): Promise<Download> {
     const downloadPromise = this.page.waitForEvent('download');
-    await this.page.getByRole('link', { name: 'Export CSV' }).click();
+    await this.page.getByTestId('export-grades-button').click();
     return downloadPromise;
   }
 }

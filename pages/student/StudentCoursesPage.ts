@@ -12,6 +12,6 @@ export class StudentCoursesPage extends BasePage {
   }
 
   async enroll(courseCode: string) {
-    await this.courseRow(courseCode).getByRole('button', { name: 'Enroll' }).click();
+    await this.courseRow(courseCode).locator('[data-testid^="enroll-course-"]').click();
   }
 }

@@ -12,6 +12,6 @@ export class ProfessorCoursesPage extends BasePage {
   }
 
   async manageStudents(courseNameOrCode: string) {
-    await this.courseRow(courseNameOrCode).getByRole('link', { name: 'Grade Students' }).click();
+    await this.courseRow(courseNameOrCode).locator('[data-testid^="manage-students-course-"]').click();
   }
 }

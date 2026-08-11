@@ -19,6 +19,6 @@ test.describe('Admin course list under network failure', () => {
 
     await expect(page.getByRole('heading', { name: '500' })).toBeVisible();
     await expect(page.getByText('Internal Server Error')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Add New Course' })).toHaveCount(0);
+    await expect(page.getByTestId('create-course-button')).toHaveCount(0);
   });
 });

@@ -8,8 +8,14 @@ import type { Locator, Page } from '@playwright/test';
 export class BasePage {
   constructor(protected readonly page: Page) {}
 
+  /**
+   * `logout-button`'s visible text (nav.logout) is i18n-driven like every
+   * other nav label — `data-testid` sidesteps that instead of assuming the
+   * shared session is still on English, which the localization race in
+   * tests/shared/localization.spec.ts proved isn't a safe assumption.
+   */
   async logout() {
-    await this.page.getByRole('button', { name: 'Logout' }).click();
+    await this.page.getByTestId('logout-button').click();
   }
 
   /**
