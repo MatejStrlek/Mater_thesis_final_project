@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures';
-import { primaryUsers, type SeedUser } from '../../utils/test-data';
+import { primaryUsers, courseId, type SeedUser } from '../../utils/test-data';
 
 // The language dropdown lives in the shared navbar every authenticated role
 // sees, and Spring's SessionLocaleResolver keys locale off the HTTP session
@@ -81,6 +81,59 @@ test.describe('Language persistence', () => {
     await test.step('Confirm it is still rendered in Croatian', async () => {
       // nav.courses = "Kolegiji" in messages_hr.properties
       await expect(page.getByRole('link', { name: 'Kolegiji' })).toBeVisible();
+    });
+  });
+});
+
+// The dashboard/courses-nav switcher tests above cover mostly static chrome
+// (a welcome banner, nav labels). These two check pages whose *content* —
+// not just the navbar — is i18n-driven: a data table with a translated
+// action button, and a materials list whose translated heading renders
+// regardless of whether the course has any content.
+test.describe('Content-bearing page localization', () => {
+  test('admin sees the course list page translated', async ({ page, loginPage, adminCoursesPage }) => {
+    await test.step('Log in with a session no other test shares', async () => {
+      await loginPage.goto();
+      await loginPage.login(primaryUsers.admin.username, primaryUsers.admin.password);
+      await loginPage.expectLoggedIn();
+    });
+
+    await adminCoursesPage.goto();
+
+    await test.step('Switches to Croatian', async () => {
+      await adminCoursesPage.switchLanguage('hr');
+      await expect(page.getByRole('link', { name: 'Dodaj novi predmet' })).toBeVisible();
+      await expect(page.getByRole('columnheader', { name: 'Bodovi' })).toBeVisible();
+    });
+
+    await test.step('Switches to German', async () => {
+      await adminCoursesPage.switchLanguage('de');
+      await expect(page.getByRole('link', { name: 'Neuen Kurs hinzufügen' })).toBeVisible();
+      await expect(page.getByRole('columnheader', { name: 'Credits' })).toBeVisible();
+    });
+  });
+
+  test('student sees the course materials page translated', async ({
+    page,
+    loginPage,
+    studentCourseContentPage,
+  }) => {
+    await test.step('Log in with a session no other test shares', async () => {
+      await loginPage.goto();
+      await loginPage.login(primaryUsers.student.username, primaryUsers.student.password);
+      await loginPage.expectLoggedIn();
+    });
+
+    await studentCourseContentPage.goto(courseId.cs101);
+
+    await test.step('Switches to Croatian', async () => {
+      await studentCourseContentPage.switchLanguage('hr');
+      await expect(page.getByRole('heading', { name: 'Materijali za kolegij' })).toBeVisible();
+    });
+
+    await test.step('Switches to German', async () => {
+      await studentCourseContentPage.switchLanguage('de');
+      await expect(page.getByRole('heading', { name: 'Kursmaterialien' })).toBeVisible();
     });
   });
 });
