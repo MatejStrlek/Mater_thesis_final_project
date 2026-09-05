@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-09-05T17:58:43.865Z",
+  "playwright": {
+    "pages": {
+      "files": 13,
+      "lines": 573
+    },
+    "fixtures": {
+      "files": 1,
+      "lines": 74
+    },
+    "tests": {
+      "files": 12,
+      "lines": 741
+    },
+    "utils": {
+      "files": 2,
+      "lines": 118
+    },
+    "total": 1506
+  },
+  "selenium": {
+    "pages": {
+      "files": 13,
+      "lines": 855
+    },
+    "tests": {
+      "files": 12,
+      "lines": 864
+    },
+    "utils": {
+      "files": 4,
+      "lines": 133
+    },
+    "total": 1852
+  }
+}

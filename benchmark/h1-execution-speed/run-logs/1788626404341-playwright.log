@@ -1,0 +1,9 @@
+--- stdout ---
+
+[2mRunning [22m45[2m tests using [22m1[2m worker[22m
+[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m[32m·[39m
+[32m  45 passed[39m[2m (33.1s)[22m
+
+--- stderr ---
+npm notice run master-thesis-final-project-code@1.0.0 npx
+npm notice run playwright test tests/public/login.spec.ts tests/admin/courses.spec.ts tests/admin/schedule.spec.ts tests/admin/users.spec.ts tests/admin/content.spec.ts tests/professor/courses.spec.ts tests/professor/grading.spec.ts tests/professor/content.spec.ts tests/student/courses.spec.ts tests/student/permissions.spec.ts tests/shared/localization.spec.ts tests/shared/student-content.spec.ts

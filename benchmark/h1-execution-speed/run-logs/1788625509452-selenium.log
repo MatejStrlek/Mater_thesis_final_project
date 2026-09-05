@@ -1,0 +1,97 @@
+--- stdout ---
+
+[0m[0m
+[0m  Admin course content management[0m
+  [32m  [32m✔[39m[0m[90m creates a new content item[0m[31m (731ms)[0m
+  [32m  [32m✔[39m[0m[90m edits an existing content item[0m[31m (515ms)[0m
+  [32m  [32m✔[39m[0m[90m deletes a content item[0m[31m (425ms)[0m
+  [32m  [32m✔[39m[0m[90m toggles publish status on a content item[0m[31m (488ms)[0m
+
+[0m  Admin course management[0m
+  [32m  [32m✔[39m[0m[90m lists seeded courses[0m
+  [32m  [32m✔[39m[0m[90m creates a new course[0m[31m (236ms)[0m
+  [32m  [32m✔[39m[0m[90m edits an existing course[0m[31m (422ms)[0m
+  [32m  [32m✔[39m[0m[90m deletes a course[0m[31m (400ms)[0m
+
+[0m  Admin schedule management[0m
+  [32m  [32m✔[39m[0m[90m creates a new schedule entry[0m[31m (230ms)[0m
+  [32m  [32m✔[39m[0m[90m edits an existing schedule entry[0m[31m (463ms)[0m
+  [32m  [32m✔[39m[0m[90m deletes a schedule entry[0m[31m (372ms)[0m
+
+[0m  Admin user management[0m
+  [32m  [32m✔[39m[0m[90m creates a new user[0m[31m (428ms)[0m
+  [32m  [32m✔[39m[0m[90m edits an existing user[0m[31m (646ms)[0m
+  [32m  [32m✔[39m[0m[90m deletes a user[0m[31m (548ms)[0m
+  [32m  [32m✔[39m[0m[90m filters the user list by role[0m[31m (177ms)[0m
+
+[0m  Professor course content management[0m
+  [32m  [32m✔[39m[0m[90m creates a new content item[0m[31m (339ms)[0m
+  [32m  [32m✔[39m[0m[90m edits an existing content item[0m[31m (457ms)[0m
+  [32m  [32m✔[39m[0m[90m deletes a content item via the confirm modal[0m[31m (727ms)[0m
+  [32m  [32m✔[39m[0m[90m toggles publish status on a content item[0m[31m (429ms)[0m
+
+[0m  Professor course list[0m
+  [32m  [32m✔[39m[0m[90m shows only courses the professor teaches[0m
+  [32m  [32m✔[39m[0m[90m redirects with an unauthorized error when accessing another professor's roster[0m[31m (133ms)[0m
+
+[0m  Professor grading[0m
+  [32m  [32m✔[39m[0m[90m shows a pre-seeded grade for a still-active enrollment[0m[31m (189ms)[0m
+  [31m  1) grading a student completes their enrollment and removes them from the active roster[0m
+  [32m  [32m✔[39m[0m[90m exports the course roster as a CSV download[0m[31m (445ms)[0m
+
+[0m  Login page[0m
+  [32m  [32m✔[39m[0m[90m shows username, password, and submit fields[0m
+  [32m  [32m✔[39m[0m[90m shows an error on invalid credentials[0m[31m (155ms)[0m
+  [32m  [32m✔[39m[0m[90m redirects an unauthenticated visit to a protected route to /login[0m
+
+[0m  Language switching[0m
+  [32m  [32m✔[39m[0m[90m admin sees the dashboard translated in all 3 supported languages[0m[31m (1160ms)[0m
+  [32m  [32m✔[39m[0m[90m mkrmpotic sees the dashboard translated in all 3 supported languages[0m[31m (1050ms)[0m
+  [32m  [32m✔[39m[0m[90m sivanovic sees the dashboard translated in all 3 supported languages[0m[31m (1048ms)[0m
+
+[0m  Language persistence[0m
+  [32m  [32m✔[39m[0m[90m locale persists across navigation without a ?lang= param[0m[31m (1058ms)[0m
+
+[0m  Content-bearing page localization[0m
+  [32m  [32m✔[39m[0m[90m admin sees the course list page translated[0m[31m (1105ms)[0m
+  [32m  [32m✔[39m[0m[90m student sees the course materials page translated[0m[31m (1314ms)[0m
+
+[0m  Student course content viewing[0m
+  [32m  [32m✔[39m[0m[90m admin publishes content, then a student can view it[0m[31m (1329ms)[0m
+
+[0m  Student course enrollment[0m
+  [32m  [32m✔[39m[0m[90m can enroll in an available course[0m[31m (340ms)[0m
+  [32m  [32m✔[39m[0m[90m can drop an enrolled course[0m[31m (197ms)[0m
+
+[0m  Student permissions[0m
+  [32m  [32m✔[39m[0m[90m student is blocked from the admin dashboard (/admin/dashboard)[0m[31m (946ms)[0m
+  [32m  [32m✔[39m[0m[90m student is blocked from the admin course list (/admin/courses)[0m[31m (1023ms)[0m
+  [32m  [32m✔[39m[0m[90m student is blocked from the admin user management (/admin/users)[0m[31m (988ms)[0m
+  [32m  [32m✔[39m[0m[90m student is blocked from the admin schedule (/admin/schedule)[0m[31m (945ms)[0m
+  [32m  [32m✔[39m[0m[90m student is blocked from the professor course list (/professor/courses)[0m[31m (946ms)[0m
+  [31m  2) student is blocked from the professor schedule (/professor/schedule)[0m
+
+
+[92m [0m[32m 40 passing[0m[90m (8m)[0m
+[31m  2 failing[0m
+
+[0m  1) Professor grading
+       grading a student completes their enrollment and removes them from the active roster:
+[0m[31m     TimeoutError: Waiting for element to be located By(xpath, //tr[td/span[normalize-space()="CS101"]])
+Wait timed out after 15088ms[0m[90m
+      at C:\Users\Matej\Desktop\Algebra\Diplomski\Selenium-masters-thesis-code\node_modules\selenium-webdriver\lib\webdriver.js:938:22
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+[0m
+[0m  2) Student permissions
+       student is blocked from the professor schedule (/professor/schedule):
+[0m[31m     TimeoutError: Waiting for element to be located By(xpath, //h2[normalize-space()="Access Denied"])
+Wait timed out after 15134ms[0m[90m
+      at C:\Users\Matej\Desktop\Algebra\Diplomski\Selenium-masters-thesis-code\node_modules\selenium-webdriver\lib\webdriver.js:938:22
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+[0m
+
+
+
+--- stderr ---
+npm notice run selenium-masters-thesis-code@1.0.0 test
+npm notice run mocha

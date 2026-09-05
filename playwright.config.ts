@@ -67,5 +67,45 @@ export default defineConfig({
       testMatch: 'shared/**/*.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
+
+    /**
+     * Thesis Chapter 5, H6 (Cross-Browser Extension Effort) — Firefox
+     * mirrors of the 5 projects the framework comparison actually
+     * measures (admin/professor/student/public/shared; `api` and `setup`
+     * excluded since they don't drive a browser engine either way and
+     * `setup`'s own chromium-generated storageState — plain cookie data —
+     * is portable to a Firefox context without regenerating it). Each is
+     * exactly its Chrome counterpart with only `devices[...]` swapped —
+     * the whole Playwright side of the H6 measurement, see
+     * benchmark/h6-cross-browser/README.md.
+     */
+    {
+      name: 'public-firefox',
+      testMatch: 'public/**/*.spec.ts',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'admin-firefox',
+      testMatch: 'admin/**/*.spec.ts',
+      use: { ...devices['Desktop Firefox'], storageState: authStatePath('admin') },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'professor-firefox',
+      testMatch: 'professor/**/*.spec.ts',
+      use: { ...devices['Desktop Firefox'], storageState: authStatePath('professor') },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'student-firefox',
+      testMatch: 'student/**/*.spec.ts',
+      use: { ...devices['Desktop Firefox'], storageState: authStatePath('student') },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'shared-firefox',
+      testMatch: 'shared/**/*.spec.ts',
+      use: { ...devices['Desktop Firefox'] },
+    },
   ],
 });

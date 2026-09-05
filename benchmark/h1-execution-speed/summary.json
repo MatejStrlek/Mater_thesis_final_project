@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-09-05T16:53:27.447Z",
+  "byFramework": {
+    "playwright": {
+      "n": 15,
+      "meanMs": 33704,
+      "medianMs": 33553,
+      "stdevMs": 4250,
+      "minMs": 30814,
+      "maxMs": 48633,
+      "nonZeroExitRuns": 0
+    },
+    "selenium": {
+      "n": 15,
+      "meanMs": 335293,
+      "medianMs": 357089,
+      "stdevMs": 80188,
+      "minMs": 199463,
+      "maxMs": 502388,
+      "nonZeroExitRuns": 11
+    }
+  }
+}

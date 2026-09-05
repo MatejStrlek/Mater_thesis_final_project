@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-09-05T17:58:43.748Z",
+  "dependencies": {
+    "playwright": {
+      "dependencies": [],
+      "devDependencies": [
+        "@axe-core/playwright",
+        "@playwright/test",
+        "@types/node"
+      ],
+      "total": 3
+    },
+    "selenium": {
+      "dependencies": [],
+      "devDependencies": [
+        "@types/chai",
+        "@types/mocha",
+        "@types/node",
+        "@types/selenium-webdriver",
+        "chai",
+        "dotenv",
+        "mocha",
+        "selenium-webdriver",
+        "ts-node",
+        "typescript"
+      ],
+      "total": 10
+    }
+  },
+  "config": {
+    "playwright": {
+      "playwright.config.ts": 112,
+      "tsconfig.json": 12,
+      "total": 124
+    },
+    "selenium": {
+      ".mocharc.json": 8,
+      "tsconfig.json": 15,
+      "total": 23
+    }
+  }
+}

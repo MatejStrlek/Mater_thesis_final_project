@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-09-05T17:58:43.802Z",
+  "playwright": {
+    "semantic": 37,
+    "testid": 40,
+    "fragile": 1
+  },
+  "selenium": {
+    "semantic": 30,
+    "testid": 53,
+    "fragile": 16
+  }
+}

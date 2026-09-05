@@ -1,0 +1,51 @@
+npm notice run master-thesis-final-project-code@1.0.0 npx
+npm notice run playwright test tests/public/login.spec.ts tests/admin/courses.spec.ts tests/admin/schedule.spec.ts tests/admin/users.spec.ts tests/admin/content.spec.ts tests/professor/courses.spec.ts tests/professor/grading.spec.ts tests/professor/content.spec.ts tests/student/courses.spec.ts tests/student/permissions.spec.ts tests/shared/localization.spec.ts tests/shared/student-content.spec.ts --project=public-firefox --project=admin-firefox --project=professor-firefox --project=student-firefox --project=shared-firefox --project=setup
+
+[2mRunning [22m45[2m tests using [22m6[2m workers[22m
+
+[1A[2K[1/45] [setup] › tests\auth.setup.ts:13:8 › authenticate as admin
+[1A[2K[2/45] [setup] › tests\auth.setup.ts:13:8 › authenticate as professor
+[1A[2K[3/45] [public-firefox] › tests\public\login.spec.ts:4:7 › Login page › shows username, password, and submit button
+[1A[2K[4/45] [setup] › tests\auth.setup.ts:13:8 › authenticate as student
+[1A[2K[5/45] [public-firefox] › tests\public\login.spec.ts:11:7 › Login page › shows an error on invalid credentials
+[1A[2K[6/45] [public-firefox] › tests\public\login.spec.ts:17:7 › Login page › redirects an unauthenticated visit to a protected route to /login
+[1A[2K[7/45] [shared-firefox] › tests\shared\localization.spec.ts:29:9 › Language switching — admin › admin sees the dashboard translated in all 3 supported languages
+[1A[2K[8/45] [shared-firefox] › tests\shared\localization.spec.ts:29:9 › Language switching — student › student sees the dashboard translated in all 3 supported languages
+[1A[2K[9/45] [shared-firefox] › tests\shared\localization.spec.ts:29:9 › Language switching — professor › professor sees the dashboard translated in all 3 supported languages
+[1A[2K[10/45] [shared-firefox] › tests\shared\localization.spec.ts:59:7 › Language persistence › locale persists across navigation without a ?lang= param
+[1A[2K[11/45] [shared-firefox] › tests\shared\localization.spec.ts:94:7 › Content-bearing page localization › admin sees the course list page translated
+[1A[2K[12/45] [shared-firefox] › tests\shared\student-content.spec.ts:23:7 › Student course content viewing › admin publishes content, then a student can view it
+[1A[2K[13/45] [shared-firefox] › tests\shared\localization.spec.ts:116:7 › Content-bearing page localization › student sees the course materials page translated
+[1A[2K[14/45] [admin-firefox] › tests\admin\content.spec.ts:15:7 › Admin course content management › creates a new content item
+[1A[2K[15/45] [admin-firefox] › tests\admin\content.spec.ts:31:7 › Admin course content management › edits an existing content item
+[1A[2K[16/45] [admin-firefox] › tests\admin\content.spec.ts:53:7 › Admin course content management › deletes a content item
+[1A[2K[17/45] [admin-firefox] › tests\admin\content.spec.ts:63:7 › Admin course content management › toggles publish status on a content item
+[1A[2K[18/45] [admin-firefox] › tests\admin\courses.spec.ts:26:7 › Admin course management › creates a new course
+[1A[2K[19/45] [admin-firefox] › tests\admin\courses.spec.ts:22:7 › Admin course management › lists seeded courses
+[1A[2K[20/45] [admin-firefox] › tests\admin\courses.spec.ts:41:7 › Admin course management › edits an existing course
+[1A[2K[21/45] [admin-firefox] › tests\admin\courses.spec.ts:61:7 › Admin course management › deletes a course
+[1A[2K[22/45] [admin-firefox] › tests\admin\schedule.spec.ts:21:7 › Admin schedule management › creates a new schedule entry
+[1A[2K[23/45] [admin-firefox] › tests\admin\schedule.spec.ts:38:7 › Admin schedule management › edits an existing schedule entry
+[1A[2K[24/45] [admin-firefox] › tests\admin\schedule.spec.ts:61:7 › Admin schedule management › deletes a schedule entry
+[1A[2K[25/45] [admin-firefox] › tests\admin\users.spec.ts:20:7 › Admin user management › creates a new user
+[1A[2K[26/45] [admin-firefox] › tests\admin\users.spec.ts:37:7 › Admin user management › edits an existing user
+[1A[2K[27/45] [admin-firefox] › tests\admin\users.spec.ts:60:7 › Admin user management › deletes a user
+[1A[2K[28/45] [admin-firefox] › tests\admin\users.spec.ts:73:7 › Admin user management › filters the user list by role
+[1A[2K[29/45] [professor-firefox] › tests\professor\content.spec.ts:15:7 › Professor course content management › creates a new content item
+[1A[2K[30/45] [professor-firefox] › tests\professor\content.spec.ts:31:7 › Professor course content management › edits an existing content item
+[1A[2K[31/45] [professor-firefox] › tests\professor\content.spec.ts:53:7 › Professor course content management › deletes a content item via the confirm modal
+[1A[2K[32/45] [professor-firefox] › tests\professor\content.spec.ts:63:7 › Professor course content management › toggles publish status on a content item
+[1A[2K[33/45] [professor-firefox] › tests\professor\courses.spec.ts:5:7 › Professor course list › shows only courses the professor teaches
+[1A[2K[34/45] [professor-firefox] › tests\professor\courses.spec.ts:11:7 › Professor course list › redirects with an unauthorized error when accessing another professor's roster
+[1A[2K[35/45] [professor-firefox] › tests\professor\grading.spec.ts:17:7 › Professor grading — pre-seeded grade › shows a pre-seeded grade for a still-active enrollment
+[1A[2K[36/45] [professor-firefox] › tests\professor\grading.spec.ts:28:7 › Professor grading › grading a student completes their enrollment and removes them from the active roster
+[1A[2K[37/45] [professor-firefox] › tests\professor\grading.spec.ts:40:7 › Professor grading › exports the course roster as a CSV download
+[1A[2K[38/45] [student-firefox] › tests\student\courses.spec.ts:5:7 › Student course enrollment › can enroll in an available course
+[1A[2K[39/45] [student-firefox] › tests\student\courses.spec.ts:22:7 › Student course enrollment › can drop an enrolled course
+[1A[2K[40/45] [student-firefox] › tests\student\permissions.spec.ts:21:7 › student is blocked from the admin dashboard (/admin/dashboard)
+[1A[2K[41/45] [student-firefox] › tests\student\permissions.spec.ts:21:7 › student is blocked from the admin course list (/admin/courses)
+[1A[2K[42/45] [student-firefox] › tests\student\permissions.spec.ts:21:7 › student is blocked from the admin user management (/admin/users)
+[1A[2K[43/45] [student-firefox] › tests\student\permissions.spec.ts:21:7 › student is blocked from the admin schedule (/admin/schedule)
+[1A[2K[44/45] [student-firefox] › tests\student\permissions.spec.ts:21:7 › student is blocked from the professor course list (/professor/courses)
+[1A[2K[45/45] [student-firefox] › tests\student\permissions.spec.ts:21:7 › student is blocked from the professor schedule (/professor/schedule)
+[1A[2K[32m  45 passed[39m[2m (41.6s)[22m
