@@ -292,13 +292,15 @@ chunk of "lines changed" on the Selenium side is prose, not logic):
 | — of which SLOC (comments excluded) | **29** | **9** |
 | — of which comment-only | 11 | 13 |
 
-Taken at face value (raw), this number favors Selenium — but once
-comments are excluded, it actually **reverses**: Playwright's five new
-Firefox projects required more than 3x the functional code Selenium's
-single new branch did (29 vs. 9 SLOC). Selenium's 22-line diff looked
-cheap largely because most of it — 13 of 22 lines — is comment prose
-explaining the change, not the change itself. Neither framing turns out
-to be the one that matters most for this hypothesis, though — see below.
+This number favors Selenium either way it's counted — raw (22 vs. 40) or
+SLOC (9 vs. 29) — but the *gap widens* once comments are excluded: 1.8x
+by raw count, 3.2x by SLOC. Selenium's 22-line diff carried
+proportionally more comment prose (13 of 22 lines) than Playwright's
+40-line diff did (11 of 40), so stripping comments shrinks Selenium's
+already-smaller number by more than it shrinks Playwright's — making
+Selenium's functional change look even cheaper relative to Playwright's,
+not more expensive. Neither framing turns out to be the one that matters
+most for this hypothesis, though — see below.
 
 **What actually happened when each suite ran against Firefox** (run
 twice, container restarted fresh both times, to check reproducibility):
@@ -389,19 +391,20 @@ Before citing an updated Selenium Firefox pass rate in the thesis, re-run
 each time, matching the original method) and replace those two columns.
 
 **Reading all of this together honestly**: line count, in either framing,
-measures "effort to make the browser launch" — and by the more
-defensible SLOC framing, Playwright needed *more* functional code
-(29 vs. 9), not less, contradicting the raw-count-favors-Selenium framing
-this section previously led with. But launching was never the bar this
-hypothesis actually cares about — reaching the *same passing coverage,
-reproducibly*, is. Playwright's config change reached that bar
-immediately, twice, with no follow-up engineering. Selenium's smaller
-functional diff got Firefox running, but needed a second, separate round
-of real debugging — a structural gap and a genuine race condition, both
-now fixed — to even approach parity, and one intermittent timing issue
-that echoes H2 rather than gets "fixed" away. That total two-phase effort
-(get it running, then debug it to parity) is the fairer effort comparison
-than either line-count framing alone.
+measures "effort to make the browser launch," and Selenium wins that
+framing regardless of how the lines are counted — the SLOC correction
+just makes Selenium's initial launch cost look even smaller relative to
+Playwright's, not larger. But launching was never the bar this hypothesis
+actually cares about — reaching the *same passing coverage, reproducibly*,
+is. Playwright's config change reached that bar immediately, twice, with
+no follow-up engineering. Selenium's smaller functional diff got Firefox
+running, but needed a second, separate round of real debugging — a
+structural gap and a genuine race condition, both now fixed — to even
+approach parity, and one intermittent timing issue that echoes H2 rather
+than gets "fixed" away. That total two-phase effort (get it running, then
+debug it to parity) is the fairer effort comparison than either
+line-count framing alone, and it's the basis the verdict below actually
+rests on.
 
 **Verdict**: **Supported**, but on the basis of *effort to reach parity*
 — now including the actual debugging effort required, not just the
@@ -419,4 +422,4 @@ either change touched.
 | H3 — Initial Setup Overhead | **Supported** (dependency count, 3 vs. 10); config-LOC caveat noted (98 vs. 23 SLOC) |
 | H4 — Locator Resilience and Maintainability | **Supported** |
 | H5 — Code Volume and Expressiveness | **Supported** (24% more SLOC for Selenium; comment density measured equal, so the gap isn't a documentation-style artifact) |
-| H6 — Cross-Browser Extension Effort | **Supported** (Playwright 45/45 first try, 0 follow-up code; Selenium's two structural bugs found and fixed post-hoc — see writeup for fix size and the Firefox re-verification caveat) — line count alone actually reverses in Playwright's favor once comments are excluded |
+| H6 — Cross-Browser Extension Effort | **Supported**, on effort-to-parity (Playwright 45/45 first try, 0 follow-up code; Selenium's smaller initial diff still needed a second debugging round — two structural bugs found and fixed post-hoc — to approach the same coverage; see writeup for fix size and the Firefox re-verification caveat) |

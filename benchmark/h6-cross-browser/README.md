@@ -23,9 +23,10 @@ user`, `edits an existing user`) also reproduced 100% both times — a real
 race condition, not flakiness either, on closer look. Only
 `can enroll in an available course` was genuinely intermittent (failed
 run 1, passed run 2) — an echo of H2's broader flakiness finding. Raw line
-count (`git diff --stat`) favors Selenium (22 vs. 40 lines) at face value,
-but **reverses** once comment-only lines are excluded (9 vs. 29 SLOC —
-see the results doc's `benchmark/lib/loc.js`-based breakdown); either way,
+count (`git diff --stat`) favors Selenium (22 vs. 40 lines), and the gap
+*widens* once comment-only lines are excluded (9 vs. 29 SLOC — see the
+results doc's `benchmark/lib/loc.js`-based breakdown), since Selenium's
+diff was proportionally more comment prose than Playwright's; either way,
 that number alone is misleading here and effort-to-reach-parity is the
 fairer framing.
 
