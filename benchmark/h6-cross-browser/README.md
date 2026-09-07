@@ -18,12 +18,24 @@ H6 section. Short version:
 One Selenium failure (`driver.setDownloadPath is not a function` — no
 Firefox equivalent of Chrome's DevTools download API in this
 `selenium-webdriver` version) reproduced 100% both times — a structural
-gap, not flakiness. The row-lookup timeouts didn't: one of the three
-failed only in run 1, passing cleanly in run 2 — genuinely intermittent
-on Firefox, an echo of H2's broader flakiness finding surfacing again
-here. Raw line count (`git diff --stat`) actually favors Selenium (22 vs.
-40 lines) — see the results doc for why that number alone is misleading
-here and effort-to-reach-parity is the fairer framing.
+gap, not flakiness. Two of the three row-lookup timeouts (`creates a new
+user`, `edits an existing user`) also reproduced 100% both times — a real
+race condition, not flakiness either, on closer look. Only
+`can enroll in an available course` was genuinely intermittent (failed
+run 1, passed run 2) — an echo of H2's broader flakiness finding. Raw line
+count (`git diff --stat`) favors Selenium (22 vs. 40 lines) at face value,
+but **reverses** once comment-only lines are excluded (9 vs. 29 SLOC —
+see the results doc's `benchmark/lib/loc.js`-based breakdown); either way,
+that number alone is misleading here and effort-to-reach-parity is the
+fairer framing.
+
+**Post-hoc fix**: both structural failures (the download crash and the
+row-lookup race) were root-caused and fixed — see the results doc's "Both
+root causes, found and fixed" section for the diagnosis, the fix, and its
+own size (28 raw / 9 SLOC / 19 comment-only lines). Confirmed via a Chrome
+regression run; **not yet re-verified on Firefox** (not installed on the
+machine the fix was made on) — re-run the two-pass Firefox comparison
+below before citing an updated post-fix pass rate.
 
 ## Method actually used (matches the original plan below)
 

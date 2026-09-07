@@ -1,37 +1,55 @@
 {
-  "generatedAt": "2026-09-05T17:58:43.865Z",
+  "generatedAt": "2026-09-07T18:19:31.485Z",
   "playwright": {
     "pages": {
       "files": 13,
-      "lines": 573
+      "lines": 573,
+      "sloc": 488,
+      "commentOnly": 85
     },
     "fixtures": {
       "files": 1,
-      "lines": 74
+      "lines": 74,
+      "sloc": 69,
+      "commentOnly": 5
     },
     "tests": {
       "files": 12,
-      "lines": 741
+      "lines": 741,
+      "sloc": 669,
+      "commentOnly": 72
     },
     "utils": {
       "files": 2,
-      "lines": 118
+      "lines": 118,
+      "sloc": 60,
+      "commentOnly": 58
     },
-    "total": 1506
+    "total": 1506,
+    "totalSloc": 1286,
+    "totalCommentOnly": 220
   },
   "selenium": {
     "pages": {
       "files": 13,
-      "lines": 855
+      "lines": 864,
+      "sloc": 705,
+      "commentOnly": 159
     },
     "tests": {
       "files": 12,
-      "lines": 864
+      "lines": 864,
+      "sloc": 809,
+      "commentOnly": 55
     },
     "utils": {
       "files": 4,
-      "lines": 133
+      "lines": 152,
+      "sloc": 84,
+      "commentOnly": 68
     },
-    "total": 1852
+    "total": 1880,
+    "totalSloc": 1598,
+    "totalCommentOnly": 282
   }
 }

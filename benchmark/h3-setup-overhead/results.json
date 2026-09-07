@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-05T17:58:43.748Z",
+  "generatedAt": "2026-09-07T18:19:53.406Z",
   "dependencies": {
     "playwright": {
       "dependencies": [],
@@ -29,14 +29,28 @@
   },
   "config": {
     "playwright": {
-      "playwright.config.ts": 112,
-      "tsconfig.json": 12,
-      "total": 124
+      "playwright.config.ts": {
+        "lines": 112,
+        "sloc": 86
+      },
+      "tsconfig.json": {
+        "lines": 12,
+        "sloc": 12
+      },
+      "total": 124,
+      "totalSloc": 98
     },
     "selenium": {
-      ".mocharc.json": 8,
-      "tsconfig.json": 15,
-      "total": 23
+      ".mocharc.json": {
+        "lines": 8,
+        "sloc": 8
+      },
+      "tsconfig.json": {
+        "lines": 15,
+        "sloc": 15
+      },
+      "total": 23,
+      "totalSloc": 23
     }
   }
 }
