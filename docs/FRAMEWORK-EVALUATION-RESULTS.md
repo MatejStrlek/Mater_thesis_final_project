@@ -375,6 +375,14 @@ convention). The actual functional fix was small; most of the diff is the
 same kind of rationale-comment overhead already visible in the original
 H6 branch above.
 
+**Total code to reach the current state, both suites**: Playwright 29
+SLOC (written once). Selenium 9 SLOC (initial branch) + 9 SLOC (this fix)
+= **18 SLOC total, including the debugging round**. Selenium still needed
+less code than Playwright even after fixing both structural bugs — this
+is worth stating plainly rather than glossing over, since it directly
+contradicts the hypothesis on the one metric this thesis measures
+quantitatively everywhere else.
+
 **Verification status — read before citing pass/fail numbers above as
 current**: both fixes were confirmed by re-running the affected specs on
 **Chrome** (41/42 passing; `creates a new user`, `edits an existing user`,
@@ -390,26 +398,32 @@ Before citing an updated Selenium Firefox pass rate in the thesis, re-run
 `BROWSER=firefox HEADLESS=true npm test` twice (fresh container restart
 each time, matching the original method) and replace those two columns.
 
-**Reading all of this together honestly**: line count, in either framing,
-measures "effort to make the browser launch," and Selenium wins that
-framing regardless of how the lines are counted — the SLOC correction
-just makes Selenium's initial launch cost look even smaller relative to
-Playwright's, not larger. But launching was never the bar this hypothesis
-actually cares about — reaching the *same passing coverage, reproducibly*,
-is. Playwright's config change reached that bar immediately, twice, with
-no follow-up engineering. Selenium's smaller functional diff got Firefox
-running, but needed a second, separate round of real debugging — a
-structural gap and a genuine race condition, both now fixed — to even
-approach parity, and one intermittent timing issue that echoes H2 rather
-than gets "fixed" away. That total two-phase effort (get it running, then
-debug it to parity) is the fairer effort comparison than either
-line-count framing alone, and it's the basis the verdict below actually
-rests on.
+**Reading all of this together honestly**: on this thesis's own
+quantitative metric — SLOC, the same one H3 and H5 verdicts are based
+on — H6 is **not supported**. Selenium needed less code than Playwright
+to add Firefox support, both before (9 vs. 29) and after (18 vs. 29) the
+debugging round that followed. That's a direct, measured contradiction of
+the hypothesis, not a caveat to bury under a different framing.
 
-**Verdict**: **Supported**, but on the basis of *effort to reach parity*
-— now including the actual debugging effort required, not just the
-initial line count in either direction — rather than on how many lines
-either change touched.
+What's left in Playwright's favor is a *qualitative* claim, not a
+measured one: Playwright's change worked cleanly and reproducibly on the
+first attempt (45/45, twice, zero follow-up), while Selenium's
+smaller change turned out to be silently broken in two ways that only
+surfaced by actually running the suite, plus one intermittent failure
+that's still unresolved by design (an H2 echo, not something a code fix
+addresses). No wall-clock debugging time, discovery effort, or "bugs per
+line" rate was tracked as part of this benchmark's method, so that
+reliability difference — real as it is — can't be reported as a measured
+result on the same footing as the LOC numbers. It's a narrative
+observation layered on top of numbers that, read on their own, point the
+other way.
+
+**Verdict**: **Mixed — not supported on this thesis's own LOC metric**
+(Selenium needed less code, before and after the fix); the case for
+Playwright rests entirely on an unmeasured qualitative difference in
+reliability (clean first-try pass vs. a debugging round plus one
+unresolved flake), which is a real and worth-reporting finding but not
+the same kind of evidence as H1–H5's quantitative verdicts.
 
 ---
 
@@ -422,4 +436,4 @@ either change touched.
 | H3 — Initial Setup Overhead | **Supported** (dependency count, 3 vs. 10); config-LOC caveat noted (98 vs. 23 SLOC) |
 | H4 — Locator Resilience and Maintainability | **Supported** |
 | H5 — Code Volume and Expressiveness | **Supported** (24% more SLOC for Selenium; comment density measured equal, so the gap isn't a documentation-style artifact) |
-| H6 — Cross-Browser Extension Effort | **Supported**, on effort-to-parity (Playwright 45/45 first try, 0 follow-up code; Selenium's smaller initial diff still needed a second debugging round — two structural bugs found and fixed post-hoc — to approach the same coverage; see writeup for fix size and the Firefox re-verification caveat) |
+| H6 — Cross-Browser Extension Effort | **Mixed** — not supported on SLOC (Selenium: 18 total incl. the fix vs. Playwright's 29); Playwright's favor rests only on an unmeasured qualitative reliability gap (45/45 clean first try vs. a debugging round plus one unresolved flake) |

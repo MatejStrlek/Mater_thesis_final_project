@@ -38,6 +38,15 @@ regression run; **not yet re-verified on Firefox** (not installed on the
 machine the fix was made on) — re-run the two-pass Firefox comparison
 below before citing an updated post-fix pass rate.
 
+**Verdict is Mixed, not Supported**: even including this fix, Selenium's
+total code (9 SLOC initial + 9 SLOC fix = 18) is still less than
+Playwright's 29 — the SLOC metric this thesis uses everywhere else
+contradicts the hypothesis here. The case for Playwright is a real but
+unmeasured qualitative one (clean first-try pass vs. a debugging round
+plus one still-unresolved flake), not a quantitative result on the same
+footing as H1–H5. See the results doc's H6 section for the full
+reasoning.
+
 ## Method actually used (matches the original plan below)
 
 1. **Playwright side**: add a `firefox` project to `playwright.config.ts`
