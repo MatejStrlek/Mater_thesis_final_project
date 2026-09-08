@@ -34,18 +34,29 @@ fairer framing.
 row-lookup race) were root-caused and fixed — see the results doc's "Both
 root causes, found and fixed" section for the diagnosis, the fix, and its
 own size (28 raw / 9 SLOC / 19 comment-only lines). Confirmed via a Chrome
-regression run; **not yet re-verified on Firefox** (not installed on the
-machine the fix was made on) — re-run the two-pass Firefox comparison
-below before citing an updated post-fix pass rate.
+regression run.
 
-**Verdict is Mixed, not Supported**: even including this fix, Selenium's
-total code (9 SLOC initial + 9 SLOC fix = 18) is still less than
-Playwright's 29 — the SLOC metric this thesis uses everywhere else
-contradicts the hypothesis here. The case for Playwright is a real but
-unmeasured qualitative one (clean first-try pass vs. a debugging round
-plus one still-unresolved flake), not a quantitative result on the same
-footing as H1–H5. See the results doc's H6 section for the full
-reasoning.
+**Re-verification (2026-09-08, Firefox now installed)**: re-running the
+two-pass Firefox comparison against the fixed code did **not** land clean
+— it surfaced 2 more instances of the exact same unguarded-redirect race
+(`AdminUsersPage.editUser()`, `ProfessorCoursesPage.manageStudents()`),
+found and fixed the same way (3 more SLOC). Only after that second round
+did Firefox go clean-ish: 42/42, then 41/42 (one already-documented,
+deliberately-unfixed timing flake, a new instance of the same category as
+the original `can enroll in an available course` finding). Playwright was
+also re-run twice against current code: 45/45 both times, unchanged. Full
+logs appended to `playwright-firefox-run.log` / `selenium-firefox-run.log`
+in this folder; full writeup in the results doc's H6 section.
+
+**Verdict is Mixed, not Supported**: even after 3 debugging rounds fixing
+4 distinct bugs, Selenium's total code (9 + 9 + 3 = 21 SLOC) is still less
+than Playwright's 29 — the SLOC metric this thesis uses everywhere else
+contradicts the hypothesis here. The case for Playwright is now a
+repeatedly re-confirmed qualitative one: clean on every one of 4 runs
+across 2 sessions, vs. Selenium needing 3 real debugging rounds to reach
+parity, 2 of which only surfaced once Firefox was actually available to
+test against locally. Still not a quantitative result on the same footing
+as H1–H5. See the results doc's H6 section for the full reasoning.
 
 ## Method actually used (matches the original plan below)
 

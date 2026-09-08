@@ -49,3 +49,8 @@ npm notice run playwright test tests/public/login.spec.ts tests/admin/courses.sp
 [1A[2K[44/45] [student-firefox] › tests\student\permissions.spec.ts:21:7 › student is blocked from the professor course list (/professor/courses)
 [1A[2K[45/45] [student-firefox] › tests\student\permissions.spec.ts:21:7 › student is blocked from the professor schedule (/professor/schedule)
 [1A[2K[32m  45 passed[39m[2m (41.6s)[22m
+
+=== RE-VERIFICATION, 2026-09-08 (same command, fresh container restart each run) ===
+Run 1: 45 passed (41.8s)
+Run 2: 45 passed (39.0s)
+Still clean and reproducible -- no test/support code changes needed, unchanged from the original result above.

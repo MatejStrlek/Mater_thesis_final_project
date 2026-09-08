@@ -302,8 +302,11 @@ Selenium's functional change look even cheaper relative to Playwright's,
 not more expensive. Neither framing turns out to be the one that matters
 most for this hypothesis, though — see below.
 
-**What actually happened when each suite ran against Firefox** (run
-twice, container restarted fresh both times, to check reproducibility):
+**What actually happened when each suite ran against Firefox, first pass**
+(run twice, container restarted fresh both times, to check
+reproducibility — **these are the original, pre-fix numbers**; see
+"Re-verification" further below for the post-fix numbers, including two
+more bugs that pre-fix pass hadn't yet surfaced):
 
 | | Playwright | Selenium (run 1) | Selenium (run 2, confirmation) |
 |---|---|---|---|
@@ -375,55 +378,106 @@ convention). The actual functional fix was small; most of the diff is the
 same kind of rationale-comment overhead already visible in the original
 H6 branch above.
 
-**Total code to reach the current state, both suites**: Playwright 29
-SLOC (written once). Selenium 9 SLOC (initial branch) + 9 SLOC (this fix)
-= **18 SLOC total, including the debugging round**. Selenium still needed
-less code than Playwright even after fixing both structural bugs — this
-is worth stating plainly rather than glossing over, since it directly
-contradicts the hypothesis on the one metric this thesis measures
-quantitatively everywhere else.
+**Re-verification, 2026-09-08 — Firefox is now installed, so the redo
+flagged below as outstanding was actually run.** Two more fresh-restart
+runs against the just-fixed code (`BROWSER=firefox HEADLESS=true npm test`,
+same method as the original two-run pass): **41/42 passing, then 40/42**.
+Neither number is the clean pass rate the fix was expected to produce —
+investigating why surfaced **two more instances of the exact same
+unguarded-redirect bug class** the original fix addressed only partially:
 
-**Verification status — read before citing pass/fail numbers above as
-current**: both fixes were confirmed by re-running the affected specs on
-**Chrome** (41/42 passing; `creates a new user`, `edits an existing user`,
-and all 3 `Professor grading` tests including the CSV export now pass;
-the one unrelated failure was a pre-existing stale-container data
-collision in `admin/schedule.spec.ts`, not caused by this change — this
-suite's own documented fix is to restart the container). Firefox itself
-is not installed on the machine this fix was made on, so the two-run
-Firefox reproduction that produced the Result/Duration numbers above has
-**not** been redone against the fixed code — those two columns are the
-original, pre-fix data, kept as the historical record of what was found.
-Before citing an updated Selenium Firefox pass rate in the thesis, re-run
-`BROWSER=firefox HEADLESS=true npm test` twice (fresh container restart
-each time, matching the original method) and replace those two columns.
+3. **`AdminUsersPage.editUser()`** never waited for its own submit's
+   redirect (to `/admin/users`) before returning, exactly like the
+   original `createUser()` bug — just not triggered by the original
+   two-run pass. The test's own next line re-navigates to that same URL,
+   so on a lost race it reads the list before the edit actually landed.
+   Reproduced as `AssertionError: expected '...Test UserTwo...' to
+   include 'Renamed'` (the row was read before the rename committed) on
+   one of the two re-verification runs.
+4. **`ProfessorCoursesPage.manageStudents()`** had the identical gap:
+   clicking "Manage Students" returned without waiting for the resulting
+   navigation to `/professor/courses/{id}/students`. `gradeFirstAvailableStudent()`'s
+   own `until.elementLocated(By.css('tbody tr'))` wait doesn't check page
+   identity, so on a lost race it grabbed a `tbody tr` off the
+   *still-loading-away* courses list page instead — surfacing as
+   `NoSuchElementError: [data-testid^="grade-input-"]` on one
+   re-verification run and `StaleElementReferenceError` on the other
+   (the same underlying race resolving two different ways depending on
+   exactly when the old page's row went away).
+
+Both fixed the same way as the original: wait for a concrete signal the
+navigation actually landed (`until.stalenessOf(form)` in `editUser()`,
+`waitForUrlContains('/students')` in `manageStudents()`) before returning
+control to the test. Confirmed via a full Chrome regression run (42/42
+passing) before re-testing Firefox again.
+
+**Fix size, this second round**: 19 raw lines changed across
+`pages/admin/AdminUsersPage.ts` and `pages/professor/ProfessorCoursesPage.ts`
+— **3 SLOC, 16 comment-only**.
+
+**Final Firefox re-verification, against the fully-fixed code, same
+method**: **42/42 passing, then 41/42**. The one remaining failure
+(`can drop an enrolled course`, a `TimeoutError` on an `ENG201` row
+lookup) is a new instance of the *same already-documented, deliberately
+unfixed category* as the original run's `can enroll in an available
+course` (PHY201) finding — a Chrome-tuned wait constant not re-tuned for
+Firefox, an H2 echo rather than a code bug. Full logs for both
+re-verification passes: `benchmark/h6-cross-browser/selenium-firefox-run.log`
+(appended, not overwritten, so the original pre-fix data stays in the
+same file as its own historical record).
+
+Playwright was also re-run twice against the current code, same command
+as the original pass: **45/45 both times** (41.8s, 39.0s) — unchanged,
+see `benchmark/h6-cross-browser/playwright-firefox-run.log`.
+
+**Total code to reach the current state, both suites**: Playwright 29
+SLOC (written once, unchanged across both re-verification passes).
+Selenium 9 SLOC (initial branch) + 9 SLOC (first fix) + 3 SLOC (second
+fix, found only once Firefox was actually available to re-test against)
+= **21 SLOC total, across three rounds of debugging**. Selenium *still*
+needed less code than Playwright even after three rounds fixing four
+distinct bugs — worth stating plainly, since it directly contradicts the
+hypothesis on the one metric this thesis measures quantitatively
+everywhere else. But the gap has now narrowed twice in a row purely from
+actually running the suite for real (29/18 = 1.61x → 29/21 = 1.38x) —
+each debugging round shrinks Selenium's SLOC advantage further, which is
+itself informative: a small, static line-count snapshot understates how
+much total engineering effort a smaller diff can still hide.
 
 **Reading all of this together honestly**: on this thesis's own
 quantitative metric — SLOC, the same one H3 and H5 verdicts are based
 on — H6 is **not supported**. Selenium needed less code than Playwright
-to add Firefox support, both before (9 vs. 29) and after (18 vs. 29) the
-debugging round that followed. That's a direct, measured contradiction of
-the hypothesis, not a caveat to bury under a different framing.
+to add Firefox support, across all three rounds (9 vs. 29, then 18 vs.
+29, now 21 vs. 29). That's a direct, measured contradiction of the
+hypothesis, not a caveat to bury under a different framing.
 
-What's left in Playwright's favor is a *qualitative* claim, not a
-measured one: Playwright's change worked cleanly and reproducibly on the
-first attempt (45/45, twice, zero follow-up), while Selenium's
-smaller change turned out to be silently broken in two ways that only
-surfaced by actually running the suite, plus one intermittent failure
-that's still unresolved by design (an H2 echo, not something a code fix
-addresses). No wall-clock debugging time, discovery effort, or "bugs per
-line" rate was tracked as part of this benchmark's method, so that
-reliability difference — real as it is — can't be reported as a measured
-result on the same footing as the LOC numbers. It's a narrative
-observation layered on top of numbers that, read on their own, point the
-other way.
+What's left in Playwright's favor is now a *partially* measured claim,
+strengthened by actually re-testing rather than left as a hypothetical:
+Playwright's change passed cleanly on **every one of 4 runs across two
+separate sessions** (45/45 ×4, zero follow-up, zero code changes ever
+needed), while Selenium needed **three separate rounds of real
+debugging** to reach parity — the first two bugs found before Firefox
+was available locally, a *third and fourth* only surfacing once Firefox
+actually existed on this machine to re-test against, meaning the original
+"not yet re-verified" caveat was hiding real, undiscovered bugs, not just
+an unconfirmed pass rate. Even after all three rounds, one Firefox-timing
+flake remains, left unresolved by design (an H2 echo). Wall-clock
+debugging time and "bugs per line" rate still weren't tracked as a formal
+metric, so this remains a narrative strength rather than a number on the
+same footing as the LOC totals — but it is no longer purely
+*hypothetical* narrative: four concrete, reproduced, root-caused bugs
+across three sessions is itself a count, even if not the one this
+thesis's SLOC metric captures.
 
 **Verdict**: **Mixed — not supported on this thesis's own LOC metric**
-(Selenium needed less code, before and after the fix); the case for
-Playwright rests entirely on an unmeasured qualitative difference in
-reliability (clean first-try pass vs. a debugging round plus one
-unresolved flake), which is a real and worth-reporting finding but not
-the same kind of evidence as H1–H5's quantitative verdicts.
+(Selenium needed less code throughout, 21 vs. 29 SLOC even after three
+debugging rounds); the case for Playwright now rests on a repeatedly
+re-confirmed reliability gap — clean on every one of 4 runs vs. four
+real bugs found and fixed across three separate debugging rounds, two of
+which only surfaced once Firefox was actually available to test
+against — which is a stronger, more concrete qualitative finding than
+the original single-round version, but still not the same kind of
+quantitative evidence as H1–H5's verdicts.
 
 ---
 
@@ -436,4 +490,4 @@ the same kind of evidence as H1–H5's quantitative verdicts.
 | H3 — Initial Setup Overhead | **Supported** (dependency count, 3 vs. 10); config-LOC caveat noted (98 vs. 23 SLOC) |
 | H4 — Locator Resilience and Maintainability | **Supported** |
 | H5 — Code Volume and Expressiveness | **Supported** (24% more SLOC for Selenium; comment density measured equal, so the gap isn't a documentation-style artifact) |
-| H6 — Cross-Browser Extension Effort | **Mixed** — not supported on SLOC (Selenium: 18 total incl. the fix vs. Playwright's 29); Playwright's favor rests only on an unmeasured qualitative reliability gap (45/45 clean first try vs. a debugging round plus one unresolved flake) |
+| H6 — Cross-Browser Extension Effort | **Mixed** — not supported on SLOC (Selenium: 21 total across 3 debugging rounds vs. Playwright's 29); Playwright's favor is a repeatedly re-confirmed reliability gap (45/45 clean on all 4 runs across 2 sessions vs. 4 real bugs found and fixed across 3 rounds, 2 only surfacing once Firefox was actually available to re-test) |

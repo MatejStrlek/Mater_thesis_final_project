@@ -106,6 +106,153 @@ Wait timed out after 15010ms[0m[90m
 
 
 
+=== RE-VERIFICATION, 2026-09-08 (fresh container restart each run) ===
+=== Pass 1 — against the post-H6 fix (setDownloadPath + createUser race), before the 2 races below were found ===
+=== Run 1: BROWSER=firefox HEADLESS=true npm test (41 passed / 1 failed) ===
+npm notice run selenium-masters-thesis-code@1.0.0 test
+npm notice run mocha
+
+
+  Admin course content management
+    creates a new content item (835ms)
+    edits an existing content item (1444ms)
+    deletes a content item (1616ms)
+    toggles publish status on a content item (1098ms)
+
+  Admin course management
+    lists seeded courses (46ms)
+    creates a new course (720ms)
+    edits an existing course (1248ms)
+    deletes a course (828ms)
+
+  Admin schedule management
+    creates a new schedule entry (971ms)
+    edits an existing schedule entry (1421ms)
+    deletes a schedule entry (1028ms)
+
+  Admin user management
+    creates a new user (742ms)
+    edits an existing user (1150ms)
+    deletes a user (1169ms)
+    filters the user list by role (390ms)
+
+  Professor course content management
+    creates a new content item (1004ms)
+    edits an existing content item (1413ms)
+    deletes a content item via the confirm modal (1329ms)
+    toggles publish status on a content item (1244ms)
+
+  Professor course list
+    shows only courses the professor teaches (41ms)
+    redirects with an unauthorized error when accessing another professor's roster (317ms)
+
+  Professor grading
+    shows a pre-seeded grade for a still-active enrollment (578ms)
+    1) grading a student completes their enrollment and removes them from the active roster
+    exports the course roster as a CSV download (752ms)
+
+  [... unaffected passing tests omitted for brevity, see full 45-test list in Run 1 above ...]
+
+  41 passing (3m)
+  1 failing
+
+  1) Professor grading
+       grading a student completes their enrollment and removes them from the active roster:
+     NoSuchElementError: Unable to locate element: [data-testid^="grade-input-"]
+      at async ProfessorGradingPage.gradeFirstAvailableStudent (pages\professor\ProfessorGradingPage.ts:47:24)
+      at async Context.<anonymous> (tests\professor\grading.spec.ts:46:27)
+
+=== Run 2 (confirmation, fresh container restart): BROWSER=firefox HEADLESS=true npm test (40 passed / 2 failed) ===
+npm notice run selenium-masters-thesis-code@1.0.0 test
+npm notice run mocha
+
+  Admin user management
+    creates a new user (746ms)
+    1) edits an existing user
+    deletes a user (922ms)
+    filters the user list by role (480ms)
+
+  Professor grading
+    shows a pre-seeded grade for a still-active enrollment (529ms)
+    2) grading a student completes their enrollment and removes them from the active roster
+    exports the course roster as a CSV download (1002ms)
+
+  [... unaffected passing tests omitted for brevity ...]
+
+  40 passing (3m)
+  2 failing
+
+  1) Admin user management
+       edits an existing user:
+     AssertionError: expected '17 e2etest2 Test UserTwo STUDENT Acti…' to include 'Renamed'
+      at Context.<anonymous> (tests\admin\users.spec.ts:64:24)
+
+  2) Professor grading
+       grading a student completes their enrollment and removes them from the active roster:
+     StaleElementReferenceError: The element with the reference 9476cfd2-ebdc-411e-93a5-5d3cefd54f78 is stale; either its node document is not the active document, or it is no longer connected to the DOM
+      at async ProfessorGradingPage.gradeFirstAvailableStudent (pages\professor\ProfessorGradingPage.ts:46:22)
+      at async Context.<anonymous> (tests\professor\grading.spec.ts:46:27)
+
+Two different runs, two different error classes (NoSuchElementError, then StaleElementReferenceError) on the
+same test, plus a new AssertionError on a previously-passing test — root-caused below as 2 more instances of
+the same unguarded-redirect race the original H6 fix addressed only partially (AdminUsersPage.editUser() and
+ProfessorCoursesPage.manageStudents() both had it too). Fixed; re-verified in Pass 2 below.
+
+=== Pass 2 — against the fully-fixed code (editUser() and manageStudents() races closed) ===
+=== Run 1: BROWSER=firefox HEADLESS=true npm test (42 passed / 0 failed) ===
+npm notice run selenium-masters-thesis-code@1.0.0 test
+npm notice run mocha
+
+  Professor grading
+    shows a pre-seeded grade for a still-active enrollment (557ms)
+    grading a student completes their enrollment and removes them from the active roster (783ms)
+    exports the course roster as a CSV download (838ms)
+
+  Admin user management
+    creates a new user (776ms)
+    edits an existing user (1234ms)
+    deletes a user (988ms)
+    filters the user list by role (574ms)
+
+  [... all 42 tests passed, full list omitted for brevity ...]
+
+  42 passing (2m)
+
+=== Run 2 (confirmation, fresh container restart): BROWSER=firefox HEADLESS=true npm test (41 passed / 1 failed) ===
+npm notice run selenium-masters-thesis-code@1.0.0 test
+npm notice run mocha
+
+  Professor grading
+    shows a pre-seeded grade for a still-active enrollment (575ms)
+    grading a student completes their enrollment and removes them from the active roster (869ms)
+    exports the course roster as a CSV download (793ms)
+
+  Admin user management
+    creates a new user (743ms)
+    edits an existing user (1531ms)
+    deletes a user (1272ms)
+    filters the user list by role (561ms)
+
+  Student course enrollment
+    can enroll in an available course (804ms)
+    1) can drop an enrolled course
+
+  [... remaining tests passed, full list omitted for brevity ...]
+
+  41 passing (3m)
+  1 failing
+
+  1) Student course enrollment
+       can drop an enrolled course:
+     TimeoutError: Waiting for element to be located By(xpath, //tr[td/strong[normalize-space()="ENG201"]])
+Wait timed out after 15155ms
+
+This is the same category of finding as the original H6 run's "can enroll in an available course" (PHY201)
+flake: a Chrome-tuned wait constant not re-tuned for Firefox's own timing, on a different row-lookup in the
+same describe block. Left as-is by design, same reasoning as the original finding — an H2 echo, not a code bug.
+
+=== END RE-VERIFICATION ===
+
 === Run 2 (confirmation, fresh container restart): BROWSER=firefox HEADLESS=true npm test (37 passed / 3 failed / 2 never ran) ===
 npm notice run selenium-masters-thesis-code@1.0.0 test
 npm notice run mocha
