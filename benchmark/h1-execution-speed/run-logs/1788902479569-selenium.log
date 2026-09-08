@@ -1,0 +1,90 @@
+--- stdout ---
+
+
+  Admin course content management
+    [32m✔[39m creates a new content item (487ms)
+    [32m✔[39m edits an existing content item (548ms)
+    [32m✔[39m deletes a content item (512ms)
+    [32m✔[39m toggles publish status on a content item (500ms)
+
+  Admin course management
+    [32m✔[39m lists seeded courses
+    [32m✔[39m creates a new course (336ms)
+    [32m✔[39m edits an existing course (447ms)
+    [32m✔[39m deletes a course (379ms)
+
+  Admin schedule management
+    [32m✔[39m creates a new schedule entry (294ms)
+    [32m✔[39m edits an existing schedule entry (413ms)
+    [32m✔[39m deletes a schedule entry (400ms)
+
+  Admin user management
+    [32m✔[39m creates a new user (454ms)
+    [32m✔[39m edits an existing user (768ms)
+    [32m✔[39m deletes a user (516ms)
+    [32m✔[39m filters the user list by role (138ms)
+
+  Professor course content management
+    [32m✔[39m creates a new content item (321ms)
+    [32m✔[39m edits an existing content item (510ms)
+    [32m✔[39m deletes a content item via the confirm modal (664ms)
+    [32m✔[39m toggles publish status on a content item (444ms)
+
+  Professor course list
+    [32m✔[39m shows only courses the professor teaches
+    [32m✔[39m redirects with an unauthorized error when accessing another professor's roster (92ms)
+
+  Professor grading
+    [32m✔[39m shows a pre-seeded grade for a still-active enrollment (191ms)
+    [32m✔[39m grading a student completes their enrollment and removes them from the active roster (239ms)
+    [32m✔[39m exports the course roster as a CSV download (420ms)
+
+  Login page
+    [32m✔[39m shows username, password, and submit fields
+    [32m✔[39m shows an error on invalid credentials (170ms)
+    [32m✔[39m redirects an unauthenticated visit to a protected route to /login
+
+  Language switching
+    [32m✔[39m admin sees the dashboard translated in all 3 supported languages (1017ms)
+    [32m✔[39m mkrmpotic sees the dashboard translated in all 3 supported languages (1065ms)
+    [32m✔[39m sivanovic sees the dashboard translated in all 3 supported languages (1112ms)
+
+  Language persistence
+    [32m✔[39m locale persists across navigation without a ?lang= param (5029ms)
+
+  Content-bearing page localization
+    [32m✔[39m admin sees the course list page translated (1160ms)
+    [32m✔[39m student sees the course materials page translated (1410ms)
+
+  Student course content viewing
+    [32m✔[39m admin publishes content, then a student can view it (1329ms)
+
+  Student course enrollment
+    [32m✔[39m can enroll in an available course (215ms)
+    [32m✔[39m can drop an enrolled course (262ms)
+
+  Student permissions
+    [32m✔[39m student is blocked from the admin dashboard (/admin/dashboard) (966ms)
+    [32m✔[39m student is blocked from the admin course list (/admin/courses) (917ms)
+    [32m✔[39m student is blocked from the admin user management (/admin/users) (1000ms)
+    [32m✔[39m student is blocked from the admin schedule (/admin/schedule) (1023ms)
+    1) student is blocked from the professor course list (/professor/courses)
+    [32m✔[39m student is blocked from the professor schedule (/professor/schedule) (1081ms)
+
+
+  41 passing (6m)
+  1 failing
+
+  1) Student permissions
+       student is blocked from the professor course list (/professor/courses):
+     TimeoutError: Waiting for element to be located By(xpath, //h2[normalize-space()="Access Denied"])
+Wait timed out after 15129ms
+      at C:\Users\Matej\Desktop\Algebra\Diplomski\Selenium-masters-thesis-code\node_modules\selenium-webdriver\lib\webdriver.js:938:22
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+
+
+
+--- stderr ---
+npm notice run selenium-masters-thesis-code@1.0.0 test
+npm notice run mocha

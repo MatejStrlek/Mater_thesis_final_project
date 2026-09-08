@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T18:19:31.485Z",
+  "generatedAt": "2026-09-08T20:01:12.733Z",
   "playwright": {
     "pages": {
       "files": 13,
@@ -32,9 +32,9 @@
   "selenium": {
     "pages": {
       "files": 13,
-      "lines": 864,
-      "sloc": 705,
-      "commentOnly": 159
+      "lines": 882,
+      "sloc": 707,
+      "commentOnly": 175
     },
     "tests": {
       "files": 12,
@@ -44,12 +44,12 @@
     },
     "utils": {
       "files": 4,
-      "lines": 152,
-      "sloc": 84,
-      "commentOnly": 68
+      "lines": 169,
+      "sloc": 94,
+      "commentOnly": 75
     },
-    "total": 1880,
-    "totalSloc": 1598,
-    "totalCommentOnly": 282
+    "total": 1915,
+    "totalSloc": 1610,
+    "totalCommentOnly": 305
   }
 }

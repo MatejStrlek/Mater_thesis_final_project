@@ -13,8 +13,8 @@ summary lives in this repo only.
 
 | Folder | Hypothesis | Script | Needs the app container? | Status |
 |---|---|---|---|---|
-| `h1-execution-speed/` | H1 — Execution Speed Advantage | `run.js [rounds]` | Yes — restarts it before every run | **Done** — n=15/15, ~9.9x, see results doc |
-| `h2-test-stability/` | H2 — Test Stability Under Repetition | `run.js [runs]` | Yes — restarts it before every run | Verdict reached from H1's side-effect data (73.3% vs. 0% run failure rate); dedicated script built but not run at full N |
+| `h1-execution-speed/` | H1 — Execution Speed Advantage | `run.js [rounds]` | Yes — restarts it before every run | **Done** — n=15/15, ~9.7x, see results doc |
+| `h2-test-stability/` | H2 — Test Stability Under Repetition | `run.js [runs]` | Yes — restarts it before every run | Verdict reached from H1's side-effect data (66.7% vs. 0% run failure rate); dedicated script built but not run at full N |
 | `h3-setup-overhead/` | H3 — Initial Setup Overhead | `analyze.js` | No — static analysis only | **Done** |
 | `h4-locator-resilience/` | H4 — Locator Resilience and Maintainability | `analyze.js` | No — static analysis only | **Done** |
 | `h5-code-volume/` | H5 — Code Volume and Expressiveness | `analyze.js` | No — static analysis only | **Done** |
@@ -34,7 +34,7 @@ node benchmark/h4-locator-resilience/analyze.js
 node benchmark/h5-code-volume/analyze.js
 
 # Dynamic (slow — each restarts the app container repeatedly):
-node benchmark/h1-execution-speed/run.js 15   # already run once (n=15/15, done) — re-run to extend the dataset
+node benchmark/h1-execution-speed/run.js 15   # already run (n=15/15, done) — re-run to refresh the dataset
 node benchmark/h2-test-stability/run.js 15    # optional — H2's verdict is already reached from H1's side-effect data
 ```
 

@@ -24,6 +24,20 @@ const RELATIVE_SPECS = [
   'shared/student-content.spec.ts',
 ];
 
-const PLAYWRIGHT_TEST_ARGS = RELATIVE_SPECS.map((s) => `tests/${s}`);
+/**
+ * H6 added 5 Firefox projects to playwright.config.ts with the same
+ * testMatch globs as their Chrome counterparts (project name doesn't gate
+ * testMatch) — so a bare file-path invocation with no --project filter
+ * silently matches both, doubling the measured scope from 45 to 87 tests.
+ * Confirmed via `npx playwright test <these files> --list`. Pinning to the
+ * original 5 Chrome-equivalent projects + setup keeps this comparable to
+ * every H1/H2 run collected before H6 existed.
+ */
+const PLAYWRIGHT_PROJECTS = ['setup', 'public', 'admin', 'professor', 'student', 'shared'];
 
-module.exports = { RELATIVE_SPECS, PLAYWRIGHT_TEST_ARGS };
+const PLAYWRIGHT_TEST_ARGS = [
+  ...RELATIVE_SPECS.map((s) => `tests/${s}`),
+  ...PLAYWRIGHT_PROJECTS.map((p) => `--project=${p}`),
+];
+
+module.exports = { RELATIVE_SPECS, PLAYWRIGHT_PROJECTS, PLAYWRIGHT_TEST_ARGS };
